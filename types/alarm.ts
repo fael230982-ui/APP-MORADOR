@@ -1,0 +1,31 @@
+export type AlertType = 'UNKNOWN_PERSON' | 'ACCESS_DENIED' | 'CAMERA_OFFLINE' | 'PANIC' | 'DANGER' | 'WARNING' | 'GENERIC';
+export type AlertSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type AlertStatus = 'OPEN' | 'READ';
+
+export type AlarmItem = {
+  id: string;
+  title: string;
+  description?: string;
+  type: AlertType | string;
+  typeLabel: string;
+  location: string;
+  detectedAt: string;
+  status: 'UNREAD' | 'READ';
+  statusLabel: string;
+  canonicalStatus: AlertStatus;
+  severity: AlertSeverity;
+  severityRank?: number;
+  cameraId?: string;
+  snapshotUrl?: string | null;
+  confidence?: number | null;
+  readAt?: string | null;
+  origin?: string | null;
+  audience?: string | null;
+  readState?: 'READ_STATE' | string | null;
+  workflowStatus?: 'NEW' | 'ON_HOLD' | 'RESOLVED' | string | null;
+  openedAt?: string | null;
+  resolvedAt?: string | null;
+  returnedToQueueAt?: string | null;
+  responsibleUserName?: string | null;
+  resolutionNote?: string | null;
+};

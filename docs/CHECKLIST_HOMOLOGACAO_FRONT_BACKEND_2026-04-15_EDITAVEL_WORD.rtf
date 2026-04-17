@@ -1,0 +1,184 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}}
+\viewkind4\uc1
+\pard\sa180\sl276\slmult1\b\f0\fs28 Checklist De Homologacao Front x Backend\par
+\pard\sa120\sl240\slmult1\b0\fs22
+Data base: 2026-04-15\par
+Formato de preenchimento sugerido: OK | Falhou | Parcial | Nao testado\par
+\par
+\b Instrucoes\par
+\b0
+Preencha a coluna Status em cada item. Use Evidencia para anotar resposta, print, horario, payload ou endpoint validado. Use Observacao para descrever comportamento, falha ou duvida.\par
+\par
+\b 1. Perfil E Configuracao Canonica\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Login com conta valida e confirmacao de carga de resident/profile\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Refresh da conta mantendo resident/profile como fonte canonica\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Carga de resident/condominium\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Validacao de enabledModules\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Validacao de residentManagementSettings\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Validacao de slimMode\cell \cell \cell \cell\row
+\par
+\b 2. LGPD\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Leitura de resident/lgpd-policy\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Leitura de resident/lgpd-consent com deviceId\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Persistencia de aceite em resident/lgpd-consent\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Leitura de historico em resident/lgpd-consent/history\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Confirmacao de versao vigente e trilha de auditoria\cell \cell \cell \cell\row
+\par
+\b 3. CPF E Menor\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Consulta resident/people/by-cpf com CPF valido e retorno\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Consulta resident/people/by-cpf com CPF valido sem retorno\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Consulta resident/people/by-cpf com CPF fora de escopo\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Confirmacao de preenchimento de fullName\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Confirmacao de preenchimento de birthDate\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Validacao do calculo de idade no front\cell \cell \cell \cell\row
+\par
+\b 4. Facial De Menor\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Cadastro de pessoa maior sem minorFacialAuthorization\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Cadastro de menor sem autorizacao\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Cadastro de menor com autorizacao\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com authorized\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com guardianName\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com guardianDocument\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com relationship\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com authorizationSource\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Payload com authorizedAt\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Confirmacao de bloqueio do facial quando autorizacao nao existir\cell \cell \cell \cell\row
+\par
+\b 5. Tempo Real E Capacidades\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Leitura de stream-capabilities\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Leitura de sync-capabilities\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Estado prepared apenas quando o contrato operacional estiver pronto\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Estado degraded quando faltar capability relevante\cell \cell \cell \cell\row
+\par
+\b 6. Observabilidade Local\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl\b Item\cell Status\cell Evidencia\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de login\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de resident/profile\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de resident/condominium\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de CPF\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de LGPD\cell \cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx5200\cellx6900\cellx9800\cellx12240
+\intbl Diagnostico local registra falha de capabilities\cell \cell \cell \cell\row
+\par
+\b 7. Resumo Executivo\par
+\b0
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl\b Campo\cell Preenchimento\cell Observacao\b0\cell\row
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl Responsavel pela homologacao\cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl Ambiente validado\cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl Resultado geral\cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl Principais falhas encontradas\cell \cell \cell\row
+\trowd\trgaph108\trleft0
+\cellx4000\cellx6500\cellx12240
+\intbl Proximos passos\cell \cell \cell\row
+\par
+\b Conclusao Esperada\par
+\b0
+Se esta checklist passar, o residual deixa de ser lacuna de contrato e passa a ser bug concreto, ajuste fino de UX ou melhoria heuristica.\par
+}

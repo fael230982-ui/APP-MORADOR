@@ -1,0 +1,35 @@
+export type CameraStatus = 'online' | 'offline';
+export type CameraMediaPriority = 'liveUrl' | 'hlsUrl' | 'webRtcUrl' | 'imageStreamUrl' | 'mjpegUrl' | 'snapshotUrl' | 'thumbnailUrl';
+export type CameraMediaAuthType = 'USER_BEARER' | string;
+
+export type Camera = {
+  id: string;
+  name: string;
+  location: string;
+  unitId?: string | null;
+  status: CameraStatus;
+  thumbnailUrl?: string | null;
+  lastActivity?: string;
+  snapshotUrl?: string | null;
+  frameUrl?: string | null;
+  previewUrl?: string | null;
+  imageStreamUrl?: string | null;
+  mjpegUrl?: string | null;
+  hlsUrl?: string | null;
+  liveUrl?: string | null;
+  webRtcUrl?: string | null;
+  vmsStreamingUrl?: string | null;
+  streamUrl?: string | null;
+  streamSourceType?: string | null;
+  provider?: string | null;
+  transport?: string | null;
+  accessGroupIds?: string[];
+  accessGroupNames?: string[];
+  preferredStillUrl?: string | null;
+  preferredLiveUrl?: string | null;
+  replayUrl?: string | null;
+  replayExpiresAt?: string | null;
+  mediaAuthType?: CameraMediaAuthType | null;
+  mediaExpirationSupported?: boolean | null;
+  preferredMedia?: CameraMediaPriority | null;
+};

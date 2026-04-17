@@ -1,0 +1,55 @@
+# dependencies
+node_modules/
+
+# Expo / build output
+.expo/
+dist/
+build/
+coverage/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.*
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# secrets / credentials
+.env
+.env.*
+!.env.whitelabel.example
+*.pem
+*firebase-adminsdk*.json
+firebase-adminsdk*.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+*.keystore
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# temp / examples
+app-example
