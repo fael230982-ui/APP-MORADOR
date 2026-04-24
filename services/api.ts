@@ -54,7 +54,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const requestUrl = String(error?.config?.url || '');
+    const shouldLogout =
+      error?.response?.status === 401 &&
+      (requestUrl.includes('/api/v1/auth/me') ||
+        requestUrl.includes('/api/v1/resident/profile') ||
+        requestUrl.includes('/api/v1/auth/logout'));
+
+    if (shouldLogout) {
       useAuthStore.getState().logout();
     }
 

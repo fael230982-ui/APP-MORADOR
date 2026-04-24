@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AuthenticatedImage from '../../components/AuthenticatedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EmptyState from '../../components/EmptyState';
 import Header from '../../components/Header';
@@ -36,9 +37,27 @@ function typeIcon(type: string) {
   return 'notifications-outline';
 }
 
+function typeLabel(type: string) {
+  if (type === 'DELIVERY_EVENT') return 'Encomenda';
+  if (type === 'ACCESS_EVENT') return 'Acesso';
+  if (type === 'OPERATION_MESSAGE') return 'Mensagem';
+  if (type === 'CAMERA_EVENT') return 'Camera';
+  if (type === 'SECURITY_ALERT') return 'Alerta';
+  return 'Aviso';
+}
+
+function domainLabel(domain?: string | null) {
+  if (domain === 'DELIVERY') return 'Encomenda';
+  if (domain === 'ACCESS') return 'Acesso';
+  if (domain === 'MESSAGE') return 'Mensagem';
+  if (domain === 'ALERT') return 'Alerta';
+  if (domain === 'CAMERA') return 'Camera';
+  return null;
+}
+
 function mediaHints(item: ResidentNotification) {
   const hints: string[] = [];
-  if (item.snapshotUrl) hints.push('Snapshot');
+  if (item.snapshotUrl) hints.push('Imagem');
   if (item.replayUrl) hints.push('Replay');
   return hints;
 }
@@ -57,11 +76,11 @@ export default function ResidentNotificationsScreen() {
   const camerasEnabled = isResidentFeatureEnabled(residentAppConfig, 'cameras');
 
   const loadNotifications = useCallback(
-    async (mode: 'initial' | 'refresh' = 'initial') => {
+    async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
       try {
         if (mode === 'refresh') {
           setRefreshing(true);
-        } else {
+        } else if (mode !== 'silent') {
           setLoading(true);
         }
 
@@ -83,7 +102,10 @@ export default function ResidentNotificationsScreen() {
     [unreadOnly]
   );
 
-  useAutoRefresh(() => loadNotifications(), { intervalMs: 20000, topics: ['notifications', 'unit', 'realtime'] });
+  useAutoRefresh(() => loadNotifications(notifications.length > 0 ? 'silent' : 'initial'), {
+    intervalMs: 20000,
+    topics: ['notifications', 'unit', 'realtime'],
+  });
 
   const filteredNotifications = useMemo(
     () =>
@@ -238,6 +260,7 @@ export default function ResidentNotificationsScreen() {
           renderItem={({ item }) => {
             const unread = !item.readAt;
             const hints = mediaHints(item);
+            const infoLabel = domainLabel(item.domain) ?? typeLabel(item.type);
             return (
               <TouchableOpacity style={styles.notificationCard} activeOpacity={0.86} onPress={() => handleOpen(item)}>
                 <View style={[styles.iconBox, unread && styles.iconBoxUnread]}>
@@ -249,7 +272,16 @@ export default function ResidentNotificationsScreen() {
                     {unread ? <View style={styles.unreadDot} /> : null}
                   </View>
                   <Text style={styles.notificationBody}>{item.body}</Text>
-                  {item.domain ? <Text style={styles.notificationMeta}>{item.domain}</Text> : null}
+                  <Text style={styles.notificationMeta}>{infoLabel}</Text>
+                  {item.snapshotUrl ? (
+                    <AuthenticatedImage
+                      uri={item.snapshotUrl}
+                      style={styles.notificationImage}
+                      fallbackTitle="Imagem da encomenda indisponivel"
+                      fallbackSubtitle="A notificacao chegou, mas a foto publicada nao esta acessivel agora."
+                      diagnosticSource={`resident-notifications.image.${item.id}`}
+                    />
+                  ) : null}
                   {hints.length > 0 ? (
                     <View style={styles.mediaRow}>
                       {hints.map((hint) => (
@@ -371,6 +403,13 @@ const styles = StyleSheet.create({
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   notificationBody: { color: colors.textMuted, fontSize: 13, lineHeight: 18, marginTop: 3 },
   notificationMeta: { color: colors.primary, fontSize: 11, marginTop: 6, fontWeight: '800' },
+  notificationImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginTop: 10,
+    backgroundColor: colors.cardSoft,
+  },
   mediaRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 8 },
   mediaPill: {
     borderRadius: 999,

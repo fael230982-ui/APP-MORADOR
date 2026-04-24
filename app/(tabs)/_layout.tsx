@@ -48,7 +48,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Início',
+            title: 'Inicio',
             tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={24} color={color} />,
           }}
         />
@@ -65,7 +65,7 @@ export default function TabLayout() {
           name="people"
           options={{
             href: accessEnabled && !slimMode ? undefined : null,
-            title: 'Acessos',
+            title: 'Pessoas',
             tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={24} color={color} />,
           }}
         />
@@ -74,7 +74,7 @@ export default function TabLayout() {
           name="cameras"
           options={{
             href: camerasEnabled && !slimMode ? undefined : null,
-            title: 'Câmeras',
+            title: 'Cameras',
             tabBarIcon: ({ color }) => <Ionicons name="videocam-outline" size={24} color={color} />,
           }}
         />

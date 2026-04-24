@@ -1,5 +1,5 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
-import { brandProfiles } from './constants/brandProfiles';
+import { brandProfilesConfig } from './constants/brandProfiles.config.ts';
 
 const env = (key: string, fallback: string) => {
   const value = process.env[key];
@@ -8,7 +8,7 @@ const env = (key: string, fallback: string) => {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const profileKey = env('EXPO_PUBLIC_BRAND_PROFILE', env('EXPO_PUBLIC_BRAND_VARIANT', 'default')).toLowerCase();
-  const profile = brandProfiles[profileKey] ?? brandProfiles.default;
+  const profile = brandProfilesConfig[profileKey] ?? brandProfilesConfig.default;
 
   const appName = env('EXPO_PUBLIC_BRAND_APP_NAME', profile.appName);
   const slug = env('EXPO_PUBLIC_BRAND_SLUG', profile.slug);
@@ -41,7 +41,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       ...config.android,
       package: androidPackage,
-      permissions: ['CAMERA', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
+      permissions: [
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'READ_MEDIA_IMAGES',
+        'ACCESS_COARSE_LOCATION',
+        'ACCESS_FINE_LOCATION',
+      ],
     },
     plugins: [
       [

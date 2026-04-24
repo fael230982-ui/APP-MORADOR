@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import AuthenticatedImage from '../../components/AuthenticatedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import PrimaryButton from '../../components/PrimaryButton';
@@ -200,7 +201,14 @@ export default function DeliveryDetailScreen() {
 
           {withdrawalQrCodeUrl ? (
             <View style={styles.qrBox}>
-              <Image source={{ uri: withdrawalQrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
+              <AuthenticatedImage
+                uri={withdrawalQrCodeUrl}
+                style={styles.qrImage}
+                contentFit="contain"
+                fallbackTitle="QR Code indisponivel"
+                fallbackSubtitle="O codigo continua valendo, mas a imagem do QR nao foi carregada."
+                diagnosticSource={`deliveries.qr.${delivery.id}`}
+              />
               <Text style={styles.qrText}>Apresente este QR Code na portaria.</Text>
             </View>
           ) : (
@@ -233,15 +241,27 @@ export default function DeliveryDetailScreen() {
 
         {delivery.photoUrl ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Foto registrada</Text>
-            <Image source={{ uri: delivery.photoUrl }} style={styles.photo} resizeMode="cover" />
+            <Text style={styles.sectionTitle}>Imagem da encomenda</Text>
+            <AuthenticatedImage
+              uri={delivery.photoUrl}
+              style={styles.photo}
+              fallbackTitle="Imagem da encomenda indisponivel"
+              fallbackSubtitle="O cadastro da encomenda existe, mas a foto publicada nao esta acessivel agora."
+              diagnosticSource={`deliveries.photo.${delivery.id}`}
+            />
           </View>
         ) : null}
 
         {delivery.evidenceUrl ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Evidencia operacional</Text>
-            <Image source={{ uri: delivery.evidenceUrl }} style={styles.photo} resizeMode="cover" />
+            <Text style={styles.sectionTitle}>Imagem complementar</Text>
+            <AuthenticatedImage
+              uri={delivery.evidenceUrl}
+              style={styles.photo}
+              fallbackTitle="Imagem complementar indisponivel"
+              fallbackSubtitle="A evidencia operacional nao foi carregada neste momento."
+              diagnosticSource={`deliveries.evidence.${delivery.id}`}
+            />
           </View>
         ) : null}
       </ScrollView>

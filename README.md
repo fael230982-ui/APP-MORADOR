@@ -42,6 +42,10 @@ npm run start
 - regras de contribuicao em `CONTRIBUTING.md`;
 - templates de issue e PR em `.github/`.
 
+## Roadmap
+
+- roadmap recente de plataformas automotivas, assistentes pessoais e automacao residencial em `docs/ROADMAP_APP_MORADOR_PLATAFORMAS_E_ASSISTENTES_2026-04-23.md`.
+
 ## Seguranca
 
 - nao publique `.env`, chaves privadas, service accounts ou credenciais;

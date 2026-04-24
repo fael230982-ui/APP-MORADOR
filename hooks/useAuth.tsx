@@ -15,6 +15,7 @@ export function useAuth() {
     token,
     setAuth,
     updateUser,
+    selectUnit,
     setResidentAppConfig,
     logout,
     hasAcceptedTerms,
@@ -31,9 +32,23 @@ export function useAuth() {
   async function signIn(payload: { email: string; password: string }) {
     try {
       const response = await loginApi.execute(payload.email, payload.password);
+      const loginUser = response.user;
+
+      if (!canUseResidentApp(loginUser.role)) {
+        const error = new Error(
+          `O perfil ${getRoleLabel(loginUser.role)} deve acessar pela web ou pelo app da guarita.`
+        );
+        (error as any).code = 'ROLE_NOT_ALLOWED_IN_RESIDENT_APP';
+        throw error;
+      }
+
+      // Persist the token before loading resident/profile so authenticated
+      // requests right after /auth/login already carry the Bearer header.
+      setAuth(loginUser, response.token);
+
       const finalUser =
         process.env.EXPO_PUBLIC_USE_MOCKS === 'true'
-          ? response.user
+          ? loginUser
           : await residentProfileService.getProfile().catch((error: any) => {
               const message =
                 error?.response?.data?.message ||
@@ -44,6 +59,7 @@ export function useAuth() {
             });
 
       if (!canUseResidentApp(finalUser.role)) {
+        logout();
         const error = new Error(
           `O perfil ${getRoleLabel(finalUser.role)} deve acessar pela web ou pelo app da guarita.`
         );
@@ -52,7 +68,18 @@ export function useAuth() {
       }
 
       await facialStatusService.syncFromUserProfile(finalUser).catch(() => undefined);
-      setAuth(finalUser, response.token);
+      updateUser(finalUser);
+      const resolvedUnitId =
+        finalUser.selectedUnitId ??
+        finalUser.unitId ??
+        (finalUser.unitIds && finalUser.unitIds.length === 1 ? finalUser.unitIds[0] : null);
+      const resolvedUnitName =
+        finalUser.selectedUnitName ??
+        finalUser.unitName ??
+        (finalUser.unitNames && finalUser.unitNames.length === 1 ? finalUser.unitNames[0] : null);
+      if (resolvedUnitId) {
+        selectUnit(resolvedUnitId, resolvedUnitName);
+      }
       const appConfig = finalUser.condominiumId
         ? await getResidentAppConfig(finalUser.condominiumId).catch(() => null)
         : null;
@@ -68,6 +95,7 @@ export function useAuth() {
       }
       return { ...response, user: finalUser };
     } catch (error) {
+      logout();
       appDiagnostics.trackError('auth.signIn', error, 'Falha no login do morador').catch(() => undefined);
       throw error;
     }
@@ -78,6 +106,17 @@ export function useAuth() {
       const me = await residentProfileService.getProfile();
       await facialStatusService.syncFromUserProfile(me).catch(() => undefined);
       updateUser(me);
+      const resolvedUnitId =
+        me.selectedUnitId ??
+        me.unitId ??
+        (me.unitIds && me.unitIds.length === 1 ? me.unitIds[0] : null);
+      const resolvedUnitName =
+        me.selectedUnitName ??
+        me.unitName ??
+        (me.unitNames && me.unitNames.length === 1 ? me.unitNames[0] : null);
+      if (resolvedUnitId) {
+        selectUnit(resolvedUnitId, resolvedUnitName);
+      }
       const appConfig = me.condominiumId
         ? await getResidentAppConfig(me.condominiumId).catch(() => null)
         : null;

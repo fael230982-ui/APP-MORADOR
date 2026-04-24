@@ -43,7 +43,16 @@ export function normalizeUser(raw: any): User {
     cpf: source?.cpf ?? source?.document ?? null,
     apartment: source?.apartment ?? source?.unitName ?? source?.selectedUnitName ?? null,
     emergencyContact: source?.emergencyContact ?? null,
-    photoUri: resolveApiUrl(source?.photoUri ?? source?.photoUrl ?? null),
+    photoUri: resolveApiUrl(
+      source?.photoUri ??
+        source?.photoUrl ??
+        source?.imageUrl ??
+        source?.avatarUrl ??
+        source?.profileImageUrl ??
+        source?.pictureUrl ??
+        source?.picture ??
+        null
+    ),
     personId: source?.personId ?? null,
     personName: source?.personName ?? null,
     unitId: source?.unitId ?? null,

@@ -114,9 +114,9 @@ export default function AccessFormScreen() {
   const { user } = useAuth();
   const selectedUnitId = useAuthStore((state) => state.selectedUnitId);
   const selectedUnitName = useAuthStore((state) => state.selectedUnitName);
-  const initialType = isAccessType(params.type) ? params.type : 'VISITOR';
+  const initialType = isAccessType(params.type) ? params.type : null;
 
-  const [type, setType] = useState<AccessType>(initialType);
+  const [type, setType] = useState<AccessType | null>(initialType);
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
@@ -145,14 +145,15 @@ export default function AccessFormScreen() {
   const [saving, setSaving] = useState(false);
   const [cpfLookupLoading, setCpfLookupLoading] = useState(false);
 
-  const requiresPeriod = type !== 'RESIDENT';
+  const requiresPeriod = type !== null && type !== 'RESIDENT';
   const requiresSchedule = type === 'SERVICE_PROVIDER';
   const age = useMemo(() => getAgeFromBirthDate(birthDate), [birthDate]);
   const isMinor = age !== null && age < 18;
   const cpfDigits = useMemo(() => normalizeCpf(document), [document]);
-  const canLookupCpf = (type === 'VISITOR' || type === 'SERVICE_PROVIDER') && cpfDigits.length === 11;
+  const canLookupCpf = !!type && (type === 'VISITOR' || type === 'SERVICE_PROVIDER') && cpfDigits.length === 11;
 
   const helperText = useMemo(() => {
+    if (!type) return 'Selecione primeiro o tipo de acesso para continuar o cadastro.';
     if (type === 'RESIDENT') return 'Moradores ficam vinculados a unidade sem validade.';
     if (type === 'SERVICE_PROVIDER') return 'Prestadores usam validade, dias da semana e faixa de horario.';
     if (type === 'RENTER') return 'Locatarios usam data de inicio e data final.';
@@ -211,6 +212,11 @@ export default function AccessFormScreen() {
   function validate() {
     if (!selectedUnitId) {
       Alert.alert('Unidade obrigatoria', 'Selecione uma unidade antes de autorizar acessos.');
+      return false;
+    }
+
+    if (!type) {
+      Alert.alert('Tipo obrigatorio', 'Escolha se o cadastro e de morador, visitante, prestador ou locatario.');
       return false;
     }
 
@@ -307,7 +313,7 @@ export default function AccessFormScreen() {
   }
 
   async function handleSubmit() {
-    if (!validate()) return;
+    if (!validate() || !type) return;
     const unitId = selectedUnitId;
     if (!unitId) return;
 
@@ -447,10 +453,22 @@ export default function AccessFormScreen() {
         </View>
 
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{typeLabel(type)}</Text>
-          <Text style={styles.noticeText}>{helperText} Preencha os dados abaixo para liberar a entrada.</Text>
+          <Text style={styles.noticeTitle}>{type ? typeLabel(type) : 'Escolha o tipo de acesso'}</Text>
+          <Text style={styles.noticeText}>{helperText}</Text>
         </View>
 
+        {!type ? (
+          <View style={styles.typeRequiredCard}>
+            <Ionicons name="finger-print-outline" size={20} color={colors.primary} />
+            <Text style={styles.typeRequiredTitle}>Selecione o tipo antes de cadastrar</Text>
+            <Text style={styles.typeRequiredText}>
+              Primeiro escolha se o cadastro e de morador, visitante, prestador ou locatario. Depois disso o formulario sera liberado.
+            </Text>
+          </View>
+        ) : null}
+
+        {!type ? null : (
+          <>
         <Field label="Nome completo" value={name} onChangeText={setName} placeholder="Nome da pessoa" />
 
         <View style={styles.field}>
@@ -595,7 +613,9 @@ export default function AccessFormScreen() {
           inputStyle={styles.textarea}
         />
 
-        <PrimaryButton title="Salvar autorizacao" loading={saving} onPress={handleSubmit} />
+        <PrimaryButton title="Salvar autorizacao" loading={saving} onPress={handleSubmit} disabled={!type} />
+          </>
+        )}
 
         {pickerTarget ? (
           <DateTimePicker
@@ -664,7 +684,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   noticeTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginBottom: 5 },
-  noticeText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, textAlign: 'justify' },
+  noticeText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  typeRequiredCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  typeRequiredTitle: { color: colors.text, fontSize: 15, fontWeight: '900' },
+  typeRequiredText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   field: { marginBottom: 14 },
   label: { color: colors.textMuted, fontSize: 12, fontWeight: '800', marginBottom: 7 },
   input: {
@@ -731,9 +763,9 @@ const styles = StyleSheet.create({
   },
   minorHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   minorTitle: { color: colors.text, fontSize: 14, fontWeight: '900' },
-  minorText: { color: colors.text, fontSize: 13, lineHeight: 19, textAlign: 'justify' },
+  minorText: { color: colors.text, fontSize: 13, lineHeight: 19 },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12, marginBottom: 8 },
-  checkboxText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19, textAlign: 'justify' },
+  checkboxText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19 },
   weekdayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   weekdayButton: {
     minWidth: 44,

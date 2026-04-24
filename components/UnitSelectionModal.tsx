@@ -32,9 +32,7 @@ export default function UnitSelectionModal({ visible, onClose, locked = false }:
           <View style={styles.header}>
             <View style={styles.headerText}>
               <Text style={styles.title}>Escolha sua unidade</Text>
-              <Text style={styles.subtitle}>
-                Selecione qual unidade você quer acompanhar agora.
-              </Text>
+              <Text style={styles.subtitle}>Selecione qual unidade você quer acompanhar agora.</Text>
             </View>
 
             {!locked && (

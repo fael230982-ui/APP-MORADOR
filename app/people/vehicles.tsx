@@ -49,6 +49,10 @@ function normalizePlate(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
 }
 
+function isValidPlate(value: string) {
+  return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(value);
+}
+
 export default function VehiclesScreen() {
   const selectedUnitId = useAuthStore((state) => state.selectedUnitId);
   const selectedUnitName = useAuthStore((state) => state.selectedUnitName);
@@ -89,7 +93,10 @@ export default function VehiclesScreen() {
   }, [search, statusFilter, vehicles]);
 
   const normalizedPlate = normalizePlate(plate);
-  const canCreate = !!selectedUnitId && !saving && !manageBlocked && normalizedPlate.length >= 7;
+  const plateHasTypedValue = normalizedPlate.length > 0;
+  const plateIsValid = isValidPlate(normalizedPlate);
+  const shouldShowPlateError = plateHasTypedValue && !plateIsValid;
+  const canCreate = !!selectedUnitId && !saving && !manageBlocked && plateIsValid;
 
   const resetForm = () => {
     setPlate('');
@@ -130,7 +137,7 @@ export default function VehiclesScreen() {
       return;
     }
 
-    if (normalizedPlate.length < 7) {
+    if (!plateIsValid) {
       Alert.alert('Placa obrigatoria', 'Informe a placa completa do veiculo.');
       return;
     }
@@ -418,10 +425,11 @@ export default function VehiclesScreen() {
                   onChangeText={(value) => setPlate(normalizePlate(value))}
                   placeholder="ABC1D23"
                   placeholderTextColor={colors.textSubtle}
-                  style={styles.input}
+                  style={[styles.input, shouldShowPlateError ? styles.inputError : undefined]}
                   autoCapitalize="characters"
                   maxLength={7}
                 />
+                {shouldShowPlateError ? <Text style={styles.errorText}>Digite uma placa valida, como ABC1234 ou ABC1D23.</Text> : null}
 
                 <Text style={styles.inputLabel}>Tipo</Text>
                 <View style={styles.typeGrid}>
@@ -600,6 +608,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
   },
+  inputError: { borderColor: colors.danger },
+  errorText: { color: colors.danger, fontSize: 12, marginTop: 6, marginBottom: 2, fontWeight: '700' },
   textArea: { minHeight: 96, textAlignVertical: 'top' },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   typeButton: {

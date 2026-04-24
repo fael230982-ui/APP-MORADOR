@@ -10,6 +10,8 @@ export type FacialSyncStatus = {
   backendState?: PublicFaceStatus | null;
   updatedAt?: string | null;
   photoUri?: string | null;
+  localPhotoUri?: string | null;
+  localPhotoDataUri?: string | null;
   backendErrorMessage?: string | null;
 };
 
@@ -70,10 +72,12 @@ export const facialStatusService = {
         backendState: normalizePublicFaceStatus(parsed?.backendState),
         updatedAt: parsed?.updatedAt ?? null,
         photoUri: parsed?.photoUri ?? null,
+        localPhotoUri: parsed?.localPhotoUri ?? null,
+        localPhotoDataUri: parsed?.localPhotoDataUri ?? null,
         backendErrorMessage: parsed?.backendErrorMessage ?? null,
       };
     } catch {
-      return { state: 'UNKNOWN', backendState: null, updatedAt: null, photoUri: null };
+      return { state: 'UNKNOWN', backendState: null, updatedAt: null, photoUri: null, localPhotoUri: null, localPhotoDataUri: null };
     }
   },
 
@@ -104,6 +108,8 @@ export const facialStatusService = {
       backendState: null,
       updatedAt: null,
       photoUri: null,
+      localPhotoUri: null,
+      localPhotoDataUri: null,
       backendErrorMessage: null,
     }));
 
@@ -112,6 +118,8 @@ export const facialStatusService = {
       backendState: backendState ?? (user.photoUri ? 'PHOTO_ONLY' : current.backendState ?? null),
       updatedAt: user.faceUpdatedAt ?? current.updatedAt ?? null,
       photoUri: user.photoUri ?? current.photoUri ?? null,
+      localPhotoUri: current.localPhotoUri ?? null,
+      localPhotoDataUri: current.localPhotoDataUri ?? null,
       backendErrorMessage: user.faceErrorMessage ?? (backendState === 'FACE_ERROR' ? current.backendErrorMessage ?? null : null),
     });
   },

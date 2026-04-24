@@ -1,4 +1,4 @@
-import api from './api';
+import api, { resolveApiUrl } from './api';
 import { normalizeResidentNotificationType, type ResidentNotification } from '../types/residentNotification';
 import { resolveNotificationSoundProfile } from '../types/notificationSound';
 import { emitAppRefresh } from '../utils/refreshBus';
@@ -24,8 +24,8 @@ function normalizeNotification(raw: any): ResidentNotification {
     cameraId: raw?.cameraId ?? null,
     visitForecastId: raw?.visitForecastId ?? raw?.visitId ?? null,
     personId: raw?.personId ?? null,
-    snapshotUrl: raw?.snapshotUrl ?? raw?.photoUrl ?? null,
-    replayUrl: raw?.replayUrl ?? null,
+    snapshotUrl: resolveApiUrl(raw?.snapshotUrl ?? raw?.photoUrl ?? null),
+    replayUrl: resolveApiUrl(raw?.replayUrl ?? null),
     payload,
     soundProfile: resolveNotificationSoundProfile({
       type,

@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import UserAvatar from '../../components/UserAvatar';
 import PrimaryButton from '../../components/PrimaryButton';
 import { colors } from '../../constants/colors';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useAuth } from '../../hooks/useAuth';
 import { useResidentPhoto } from '../../hooks/useResidentPhoto';
+import { getAuthImageHeaders } from '../../services/api';
 import { facialStatusService, getFacialStatusLabel, type FacialSyncStatus } from '../../services/facialStatus';
 
 function getFeedback(status: 'PENDING_PROCESSING' | 'NOT_REGISTERED') {
@@ -32,10 +33,29 @@ function formatDate(value?: string | null) {
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+function buildPhotoPreviewSource(uri?: string | null, refreshKey?: number) {
+  if (!uri) return null;
+  const isRemote = /^https?:\/\//i.test(uri);
+  if (!isRemote) {
+    return { uri };
+  }
+
+  const separator = uri.includes('?') ? '&' : '?';
+  return {
+    uri: `${uri}${separator}photoTs=${refreshKey ?? 'static'}`,
+    headers: getAuthImageHeaders(),
+  };
+}
+
 export default function FaceEnrollmentScreen() {
   const { user } = useAuth();
-  const { takePhoto, pickPhoto, uploading } = useResidentPhoto();
+  const { takePhoto, pickPhoto, uploading, isIosExpoGo } = useResidentPhoto();
   const [syncStatus, setSyncStatus] = useState<FacialSyncStatus>({ state: 'UNKNOWN' });
+  const [imageFailed, setImageFailed] = useState(false);
+  const [photoRefreshKey, setPhotoRefreshKey] = useState(() => Date.now());
+  const fallbackPhotoUri = syncStatus.localPhotoDataUri ?? syncStatus.localPhotoUri ?? null;
+  const effectivePhotoUri = fallbackPhotoUri ?? user?.photoUri ?? syncStatus.photoUri ?? null;
+  const previewSource = buildPhotoPreviewSource(effectivePhotoUri, photoRefreshKey);
 
   const loadStatus = useCallback(async () => {
     const current = await facialStatusService.get();
@@ -51,8 +71,14 @@ export default function FaceEnrollmentScreen() {
 
       const current = await facialStatusService.get();
       setSyncStatus(current);
+      setImageFailed(false);
+      setPhotoRefreshKey(Date.now());
       Alert.alert('Cadastro atualizado', getFeedback(result.facialSyncStatus));
     } catch (err: any) {
+      if (err?.code === 'PHOTO_PICKER_PERMISSION_ERROR') {
+        Alert.alert('Permissao indisponivel', 'O Expo Go nao conseguiu abrir a camera ou a galeria agora. Feche e abra o app novamente e tente mais uma vez.');
+        return;
+      }
       const status = err?.cause?.response?.status ?? err?.response?.status;
 
       if (err?.code === 'PROFILE_UPDATE_FAILED_AFTER_UPLOAD' && (status === 403 || status === 404 || status === 405)) {
@@ -94,13 +120,23 @@ export default function FaceEnrollmentScreen() {
       </View>
 
       <View style={styles.previewCard}>
-        <UserAvatar
-          name={user?.name || 'Morador'}
-          photoUri={user?.photoUri}
-          size={140}
-          textSize={48}
-          iconFallback={<Ionicons name="person" size={64} color={colors.white} />}
-        />
+        {previewSource && !imageFailed ? (
+          <Image
+            source={previewSource}
+            style={styles.previewImage}
+            resizeMode="contain"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <UserAvatar
+            name={user?.name || 'Morador'}
+            photoUri={effectivePhotoUri}
+            fallbackPhotoUri={fallbackPhotoUri}
+            size={140}
+            textSize={48}
+            iconFallback={<Ionicons name="person" size={64} color={colors.white} />}
+          />
+        )}
         <Text style={styles.previewTitle}>Foto atual</Text>
         <Text style={styles.previewText}>
           Sempre que possivel, mantenha a foto recente. Isso melhora identificacao no app e no fluxo facial.
@@ -127,12 +163,21 @@ export default function FaceEnrollmentScreen() {
         <PrimaryButton title="Tirar foto" onPress={() => handleAction(takePhoto)} loading={uploading} />
         <View style={styles.buttonSpacer} />
         <PrimaryButton
-          title="Escolher foto da galeria"
+          title={isIosExpoGo() ? 'Galeria indisponivel no Expo Go' : 'Escolher foto da galeria'}
           variant="secondary"
           onPress={() => handleAction(pickPhoto)}
-          disabled={uploading}
+          disabled={uploading || isIosExpoGo()}
         />
       </View>
+
+      {isIosExpoGo() ? (
+        <View style={styles.notice}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+          <Text style={styles.noticeText}>
+            No iPhone com Expo Go, escolher foto pela galeria pode falhar. Use `Tirar foto` durante os testes ou valide a galeria em uma build nativa.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -151,6 +196,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 20,
+  },
+  previewImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 8,
+    backgroundColor: colors.background,
   },
   previewTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 16, marginBottom: 8 },
   previewText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, textAlign: 'center' },

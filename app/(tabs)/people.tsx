@@ -26,15 +26,8 @@ const CATEGORIES = [
   { id: 'VISITOR', label: 'Visitantes' },
   { id: 'SERVICE_PROVIDER', label: 'Prestadores' },
   { id: 'DELIVERER', label: 'Entregadores' },
-  { id: 'RENTER', label: 'Locatários' },
+  { id: 'RENTER', label: 'Locatarios' },
 ];
-
-const CREATE_ACTIONS = [
-  { label: 'Morador', icon: 'home-outline', type: 'RESIDENT' },
-  { label: 'Visitante', icon: 'person-add-outline', type: 'VISITOR' },
-  { label: 'Prestador', icon: 'construct-outline', type: 'SERVICE_PROVIDER' },
-  { label: 'Locatário', icon: 'key-outline', type: 'RENTER' },
-] as const;
 
 export default function PeopleScreen() {
   const residentAppConfig = useAuthStore((state) => state.residentAppConfig);
@@ -44,14 +37,13 @@ export default function PeopleScreen() {
   const [people, setPeople] = useState<Person[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [showCreateOptions, setShowCreateOptions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadPeople = useCallback(async () => {
     if (!residentAccessAllowed) {
       setPeople([]);
-      setError('Sua conta não pode consultar os cadastros desta unidade.');
+      setError('Sua conta nao pode consultar os cadastros desta unidade.');
       setLoading(false);
       return;
     }
@@ -63,11 +55,11 @@ export default function PeopleScreen() {
       setPeople(data);
     } catch (err: any) {
       if (!err?.response) {
-        setError('Não foi possível carregar os cadastros agora. Tente novamente em instantes.');
+        setError('Nao foi possivel carregar os cadastros agora. Tente novamente em instantes.');
       } else if (err.response.status === 403) {
-        setError('Sua conta não pode consultar os cadastros desta unidade.');
+        setError('Sua conta nao pode consultar os cadastros desta unidade.');
       } else {
-        setError('Não foi possível carregar os cadastros agora.');
+        setError('Nao foi possivel carregar os cadastros agora.');
       }
     } finally {
       setLoading(false);
@@ -89,67 +81,32 @@ export default function PeopleScreen() {
 
   const listHeader = (
     <View style={styles.header}>
-      <Text style={styles.title}>Acessos</Text>
-      <Text style={styles.subtitle}>Cadastre pessoas da unidade e acompanhe as permissões mais importantes.</Text>
+      <Text style={styles.title}>Pessoas</Text>
+      <Text style={styles.subtitle}>Veja quem esta vinculado a unidade e autorize novos acessos quando precisar.</Text>
 
       {!residentAccessAllowed ? (
         <View style={styles.noticeBox}>
           <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
-          <Text style={styles.noticeText}>O controle de acesso desta unidade não está disponível para esta conta.</Text>
+          <Text style={styles.noticeText}>O controle de acesso desta unidade nao esta disponivel para esta conta.</Text>
         </View>
       ) : null}
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar por nome ou tipo"
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
-      {residentAccessAllowed ? (
-        <>
-          <TouchableOpacity
-            style={styles.createHeader}
-            activeOpacity={0.86}
-            onPress={() => setShowCreateOptions((current) => !current)}
-          >
-            <View style={styles.createHeaderIcon}>
-              <Ionicons name="person-add-outline" size={18} color={colors.primary} />
-            </View>
-            <View style={styles.createHeaderText}>
-              <Text style={styles.createTitle}>Quer cadastrar alguém?</Text>
-              <Text style={styles.createSubtitle}>Morador, visitante, prestador ou locatário.</Text>
-            </View>
-            <Ionicons name={showCreateOptions ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSubtle} />
-          </TouchableOpacity>
-
-          {showCreateOptions ? (
-            <View style={styles.createGrid}>
-              {CREATE_ACTIONS.map((action) => (
-                <TouchableOpacity
-                  key={action.type}
-                  style={styles.createButton}
-                  activeOpacity={0.85}
-                  onPress={() => router.push(`/people/access-form?type=${action.type}`)}
-                >
-                  <Ionicons name={action.icon} size={18} color={colors.primary} />
-                  <Text style={styles.createButtonText}>{action.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : null}
+      <TouchableOpacity style={styles.createCard} activeOpacity={0.86} onPress={() => router.push('/people/access-form')}>
+        <View style={styles.createCardIcon}>
+          <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+        </View>
+        <View style={styles.createCardTextArea}>
+          <Text style={styles.createCardTitle}>Autorizar acesso</Text>
+          <Text style={styles.createCardText}>Escolha o tipo de cadastro primeiro e depois conclua o preenchimento.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
+      </TouchableOpacity>
 
       <View style={styles.shortcutRow}>
         {vehiclesEnabled ? (
           <TouchableOpacity style={styles.shortcutButton} activeOpacity={0.85} onPress={() => router.push('/people/vehicles')}>
             <Ionicons name="car-outline" size={18} color={colors.primary} />
-            <Text style={styles.shortcutText}>Veículos</Text>
+            <Text style={styles.shortcutText}>Veiculos</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -158,33 +115,43 @@ export default function PeopleScreen() {
           <Text style={styles.shortcutText}>Previstos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.shortcutButton}
-          activeOpacity={0.85}
-          onPress={() => router.push('/people/access-history')}
-        >
+        <TouchableOpacity style={styles.shortcutButton} activeOpacity={0.85} onPress={() => router.push('/people/access-history')}>
           <Ionicons name="walk-outline" size={18} color={colors.primary} />
-          <Text style={styles.shortcutText}>Últimos</Text>
+          <Text style={styles.shortcutText}>Historico</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Pessoas autorizadas</Text>
+      <View style={styles.filterCard}>
+        <Text style={styles.sectionTitle}>Lista da unidade</Text>
+        <Text style={styles.filterLabel}>Filtrar pessoas</Text>
 
-      <FlatList
-        data={CATEGORIES}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterTab, selectedCategory === item.id && styles.filterTabActive]}
-            onPress={() => setSelectedCategory(item.id)}
-          >
-            <Text style={[styles.filterText, selectedCategory === item.id && styles.filterTextActive]}>{item.label}</Text>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.filterList}
-      />
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por nome ou tipo"
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        <FlatList
+          data={CATEGORIES}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.filterTab, selectedCategory === item.id && styles.filterTabActive]}
+              onPress={() => setSelectedCategory(item.id)}
+            >
+              <Text style={[styles.filterText, selectedCategory === item.id && styles.filterTextActive]}>{item.label}</Text>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.filterList}
+        />
+      </View>
     </View>
   );
 
@@ -193,7 +160,7 @@ export default function PeopleScreen() {
       <View style={styles.container}>
         <FeatureLockedState
           icon="lock-closed-outline"
-          title="Acessos indisponiveis"
+          title="Pessoas indisponiveis"
           description="O controle de acesso desta unidade nao foi habilitado para esta conta ou para este condominio."
           actionLabel="Voltar para o inicio"
           onAction={() => router.replace('/')}
@@ -234,7 +201,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { paddingHorizontal: 18, paddingTop: 56, paddingBottom: 12 },
   title: { color: colors.text, fontSize: 30, fontWeight: '900' },
-  subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 5, marginBottom: 14, textAlign: 'justify' },
+  subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 5, marginBottom: 14 },
   noticeBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -247,18 +214,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   noticeText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: '700' },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  searchInput: { flex: 1, color: colors.text, marginLeft: 8 },
-  createHeader: {
+  createCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -267,34 +223,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
-    marginTop: 14,
+    marginBottom: 12,
   },
-  createHeaderIcon: {
-    width: 40,
-    height: 40,
+  createCardIcon: {
+    width: 42,
+    height: 42,
     borderRadius: 8,
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  createHeaderText: { flex: 1 },
-  createTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginBottom: 2 },
-  createSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 17, textAlign: 'justify' },
-  createGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
-  createButton: {
-    width: '47.5%',
-    backgroundColor: colors.cardSoft,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  createButtonText: { color: colors.text, fontSize: 12, fontWeight: '800', flex: 1, textAlign: 'center' },
-  shortcutRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  createCardTextArea: { flex: 1 },
+  createCardTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginBottom: 2 },
+  createCardText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  shortcutRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   shortcutButton: {
     flex: 1,
     flexDirection: 'row',
@@ -309,8 +251,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   shortcutText: { color: colors.text, fontSize: 12, fontWeight: '800' },
-  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '900', marginTop: 16 },
-  filterList: { paddingTop: 12, paddingBottom: 6 },
+  filterCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginTop: 2,
+  },
+  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
+  filterLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '800', marginTop: 8, marginBottom: 10 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchInput: { flex: 1, color: colors.text, marginLeft: 8 },
+  filterList: { paddingTop: 12, paddingBottom: 2 },
   filterTab: {
     paddingHorizontal: 14,
     paddingVertical: 8,

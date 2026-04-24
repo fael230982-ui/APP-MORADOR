@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AuthenticatedImage from '../../components/AuthenticatedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EmptyState from '../../components/EmptyState';
 import FeatureLockedState from '../../components/FeatureLockedState';
@@ -43,6 +44,7 @@ export default function DeliveriesScreen() {
   const [notificationsAvailable, setNotificationsAvailable] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('ALL');
@@ -55,14 +57,19 @@ export default function DeliveriesScreen() {
     return deliveries;
   }, [deliveries, filter]);
 
-  const loadDeliveries = useCallback(async () => {
+  const loadDeliveries = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
     if (!selectedUnitId) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (mode === 'refresh') {
+        setRefreshing(true);
+      } else if (mode !== 'silent' && deliveries.length === 0) {
+        setLoading(true);
+      }
       setError(null);
       setAccessDenied(false);
       const result = await deliveriesService.listResidentDeliveries();
@@ -81,10 +88,15 @@ export default function DeliveriesScreen() {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [selectedUnitId]);
+  }, [deliveries.length, selectedUnitId]);
 
-  useAutoRefresh(loadDeliveries, { enabled: !!selectedUnitId, intervalMs: 30000, topics: ['deliveries', 'notifications', 'unit', 'realtime'] });
+  useAutoRefresh(() => loadDeliveries(deliveries.length > 0 ? 'silent' : 'initial'), {
+    enabled: !!selectedUnitId,
+    intervalMs: 45000,
+    topics: ['deliveries', 'notifications', 'unit', 'realtime'],
+  });
 
   const renderItem = ({ item }: { item: Delivery }) => {
     const pending = isDeliveryPending(item.status);
@@ -95,6 +107,15 @@ export default function DeliveriesScreen() {
         activeOpacity={0.85}
         onPress={() => router.push(`/deliveries/${item.id}`)}
       >
+        {item.photoUrl ? (
+          <AuthenticatedImage
+            uri={item.photoUrl}
+            style={styles.cardImage}
+            fallbackTitle="Imagem da encomenda indisponivel"
+            fallbackSubtitle="A portaria registrou a encomenda, mas a foto nao esta acessivel agora."
+            diagnosticSource={`deliveries.card.${item.id}`}
+          />
+        ) : null}
         <View style={styles.cardHeader}>
           <View style={styles.iconBox}>
             <Ionicons name="cube-outline" size={22} color={pending ? colors.warning : colors.textMuted} />
@@ -219,7 +240,7 @@ export default function DeliveriesScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadDeliveries} tintColor={colors.primary} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDeliveries('refresh')} tintColor={colors.primary} />}
             ListHeaderComponent={
               error && deliveries.length > 0 ? (
                 <View style={styles.errorNoticeBox}>
@@ -329,6 +350,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pendingCard: { borderColor: colors.warning },
+  cardImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: 8,
+    backgroundColor: colors.cardSoft,
+    marginBottom: 14,
+  },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBox: {
     width: 42,

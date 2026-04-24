@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PrimaryButton from '../../components/PrimaryButton';
 import UserAvatar from '../../components/UserAvatar';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useResidentPhoto } from '../../hooks/useResidentPhoto';
+import { getAuthImageHeaders } from '../../services/api';
+import { facialStatusService } from '../../services/facialStatus';
 import { residentProfileService } from '../../services/residentProfile';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -21,27 +23,48 @@ function isValidEmail(value: string) {
 }
 
 function getPhotoFeedback(status: 'PENDING_PROCESSING' | 'NOT_REGISTERED') {
-  if (status === 'PENDING_PROCESSING') {
-    return 'A foto foi salva no perfil. O cadastro facial foi enviado e agora aguarda sincronizacao do backend.';
+  if (status === 'PENDING_PROCESSING') return 'A foto foi salva com sucesso.';
+  return 'A foto foi salva no perfil.';
+}
+
+function buildPhotoPreviewSource(uri?: string | null, refreshKey?: number) {
+  if (!uri) return null;
+  const isRemote = /^https?:\/\//i.test(uri);
+  if (!isRemote) {
+    return { uri };
   }
 
-  return 'A foto foi salva no perfil.';
+  const separator = uri.includes('?') ? '&' : '?';
+  return {
+    uri: `${uri}${separator}photoTs=${refreshKey ?? 'static'}`,
+    headers: getAuthImageHeaders(),
+  };
 }
 
 export default function EditProfileScreen() {
   const { user, refreshMe } = useAuth();
   const updateUser = useAuthStore((state) => state.updateUser);
-  const { takePhoto, pickPhoto, uploading } = useResidentPhoto();
+  const { takePhoto, pickPhoto, uploading, isIosExpoGo } = useResidentPhoto();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [fallbackPhotoUri, setFallbackPhotoUri] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [photoRefreshKey, setPhotoRefreshKey] = useState(() => Date.now());
 
   useEffect(() => {
     setName(user?.name || '');
     setEmail(user?.email || '');
     setPhone(user?.phone || '');
   }, [user]);
+
+  useEffect(() => {
+    facialStatusService
+      .get()
+      .then((status) => setFallbackPhotoUri(status.localPhotoDataUri ?? status.localPhotoUri ?? status.photoUri ?? null))
+      .catch(() => setFallbackPhotoUri(null));
+  }, [user?.photoUri]);
 
   const originalName = normalizeField(user?.name);
   const originalEmail = normalizeField(user?.email);
@@ -56,11 +79,22 @@ export default function EditProfileScreen() {
 
   const emailIsValid = useMemo(() => isValidEmail(normalizedEmail), [normalizedEmail]);
   const canSave = hasChanges && !!normalizedName && emailIsValid && !saving && !uploading;
+  const profilePhotoUri = user?.photoUri ?? fallbackPhotoUri ?? null;
+  const resolvedPhotoSource = useMemo(
+    () => buildPhotoPreviewSource(profilePhotoUri, photoRefreshKey),
+    [photoRefreshKey, profilePhotoUri]
+  );
 
   async function handleRefresh() {
     try {
       const profile = await refreshMe();
       updateUser(profile);
+      const status = await facialStatusService.get().catch(() => null);
+      setFallbackPhotoUri(
+        profile.photoUri ?? status?.localPhotoDataUri ?? status?.localPhotoUri ?? fallbackPhotoUri ?? null
+      );
+      setImageFailed(false);
+      setPhotoRefreshKey(Date.now());
       Alert.alert('Pronto', 'Dados atualizados.');
     } catch {
       Alert.alert('Erro', 'Nao foi possivel atualizar os dados agora.');
@@ -72,8 +106,15 @@ export default function EditProfileScreen() {
       const result = await action();
       if (!result) return;
 
+      setFallbackPhotoUri(result.localPhotoDataUri ?? result.localPhotoUri ?? result.photoUri);
+      setImageFailed(false);
+      setPhotoRefreshKey(Date.now());
       Alert.alert('Foto atualizada', getPhotoFeedback(result.facialSyncStatus));
     } catch (err: any) {
+      if (err?.code === 'PHOTO_PICKER_PERMISSION_ERROR') {
+        Alert.alert('Permissao indisponivel', 'O Expo Go nao conseguiu abrir a camera ou a galeria agora. Feche e abra o app novamente e tente mais uma vez.');
+        return;
+      }
       const status = err?.cause?.response?.status ?? err?.response?.status;
 
       if (err?.code === 'PROFILE_UPDATE_FAILED_AFTER_UPLOAD' && (status === 403 || status === 404 || status === 405)) {
@@ -111,7 +152,13 @@ export default function EditProfileScreen() {
         email: normalizedEmail || undefined,
         phone: normalizedPhone || undefined,
       });
-      updateUser(updatedProfile);
+      updateUser({
+        ...user,
+        ...updatedProfile,
+        name: normalizedName || updatedProfile.name,
+        email: normalizedEmail || updatedProfile.email,
+        phone: normalizedPhone || updatedProfile.phone,
+      });
       Alert.alert('Dados atualizados', 'As informacoes do seu perfil foram salvas.');
     } catch (err: any) {
       const status = err?.response?.status;
@@ -142,27 +189,40 @@ export default function EditProfileScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>Perfil da conta</Text>
-          <Text style={styles.noticeText}>
-            A API v4.0 ja preve atualizacao do perfil do morador. Se a liberacao ainda nao estiver ativa em producao,
-            o app continua consultando os dados normalmente.
-          </Text>
-        </View>
-
         <View style={styles.photoCard}>
-          <UserAvatar
-            name={user?.name || 'Morador'}
-            photoUri={user?.photoUri}
-            size={92}
-            textSize={34}
-            iconFallback={<Ionicons name="person" size={42} color={colors.white} />}
-          />
+          {resolvedPhotoSource && !imageFailed ? (
+            <Image
+              source={resolvedPhotoSource}
+              style={styles.photoPreview}
+              resizeMode="contain"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <View style={styles.avatarFallbackBox}>
+              <UserAvatar
+                name={user?.name || 'Morador'}
+                photoUri={profilePhotoUri}
+                fallbackPhotoUri={fallbackPhotoUri}
+                size={92}
+                textSize={34}
+                iconFallback={<Ionicons name="person" size={42} color={colors.white} />}
+              />
+              <Text style={styles.avatarFallbackText}>
+                {profilePhotoUri
+                  ? 'Existe uma foto salva, mas a visualizacao nao foi carregada neste momento.'
+                  : 'Adicione uma foto para facilitar sua identificacao no app.'}
+              </Text>
+            </View>
+          )}
           <View style={styles.photoTextArea}>
             <Text style={styles.photoTitle}>Foto do morador</Text>
             <Text style={styles.photoText}>
-              Esta imagem aparece no app e pode ser usada nos fluxos de leitura facial quando o backend estiver
-              liberado.
+              {profilePhotoUri
+                ? 'Esta e a foto atualmente vinculada ao seu perfil.'
+                : 'Adicione uma foto para facilitar sua identificacao no app.'}
+            </Text>
+            <Text style={styles.photoStatus}>
+              {user?.photoUri ? 'Origem: perfil oficial da conta' : fallbackPhotoUri ? 'Origem: copia local temporaria' : 'Sem foto publicada'}
             </Text>
           </View>
         </View>
@@ -176,19 +236,27 @@ export default function EditProfileScreen() {
             style={styles.photoButton}
           />
           <PrimaryButton
-            title="Escolher foto"
+            title={isIosExpoGo() ? 'Galeria indisponivel no Expo Go' : 'Escolher foto'}
             onPress={() => handlePhotoAction(pickPhoto)}
             variant="secondary"
-            disabled={saving || uploading}
+            disabled={saving || uploading || isIosExpoGo()}
             style={styles.photoButton}
           />
         </View>
 
+        {isIosExpoGo() ? (
+          <View style={styles.helperBox}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+            <Text style={styles.helperText}>
+              No iPhone com Expo Go, escolher foto pela galeria pode falhar. Use `Tirar foto` aqui no teste ou valide a galeria em uma build nativa.
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.helperBox}>
           <Ionicons name="time-outline" size={18} color={colors.primary} />
           <Text style={styles.helperText}>
-            Alterou nome, telefone, e-mail ou foto recentemente? Toque em atualizar para buscar os dados mais novos da
-            sua conta.
+            Alterou nome, telefone, e-mail ou foto recentemente? Toque em atualizar para buscar os dados mais novos da sua conta.
           </Text>
         </View>
 
@@ -227,11 +295,7 @@ export default function EditProfileScreen() {
         </View>
 
         <Text style={styles.statusText}>
-          {uploading
-            ? 'Enviando foto...'
-            : hasChanges
-              ? 'Alteracoes prontas para salvar.'
-              : 'Nenhuma alteracao pendente.'}
+          {uploading ? 'Enviando foto...' : hasChanges ? 'Alteracoes prontas para salvar.' : 'Nenhuma alteracao pendente.'}
         </Text>
 
         <PrimaryButton title="Salvar alteracoes" loading={saving} onPress={handleSave} disabled={!canSave} />
@@ -246,20 +310,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   backButton: { marginLeft: 10 },
   content: { padding: 20, paddingBottom: 100 },
-  notice: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 16,
-  },
-  noticeTitle: { color: colors.text, fontSize: 15, fontWeight: '900', marginBottom: 6 },
-  noticeText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   photoCard: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 14,
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: colors.surface,
     borderRadius: 8,
     borderWidth: 1,
@@ -267,9 +321,26 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  photoPreview: {
+    width: '100%',
+    height: 260,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+  },
+  avatarFallbackBox: {
+    minHeight: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    padding: 16,
+  },
+  avatarFallbackText: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   photoTextArea: { flex: 1 },
   photoTitle: { color: colors.text, fontSize: 15, fontWeight: '900', marginBottom: 6 },
   photoText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  photoStatus: { color: colors.primary, fontSize: 12, fontWeight: '800', marginTop: 8 },
   photoActions: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   photoButton: { flex: 1 },
   helperBox: {

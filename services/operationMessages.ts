@@ -8,13 +8,26 @@ export type OperationMessage = {
   unitName?: string | null;
   senderUserId?: string | null;
   senderUserName?: string | null;
+  recipientPersonId?: string | null;
+  recipientPersonName?: string | null;
+  recipientPhone?: string | null;
   direction: 'PORTARIA_TO_RESIDENT' | 'RESIDENT_TO_PORTARIA' | string;
   origin: 'APP' | 'WHATSAPP' | 'PORTARIA' | string;
   body: string;
   status: string;
+  externalMessageId?: string | null;
+  externalMetadata?: Record<string, unknown> | null;
   readAt?: string | null;
   createdAt: string;
 };
+
+export function isIncomingOperationMessage(message: OperationMessage) {
+  return message.direction === 'PORTARIA_TO_RESIDENT';
+}
+
+export function isUnreadIncomingOperationMessage(message: OperationMessage) {
+  return isIncomingOperationMessage(message) && !message.readAt;
+}
 
 function normalizeMessage(raw: any): OperationMessage {
   return {
@@ -24,10 +37,16 @@ function normalizeMessage(raw: any): OperationMessage {
     unitName: raw?.unitName ?? raw?.unit?.name ?? raw?.unitLabel ?? null,
     senderUserId: raw?.senderUserId ?? raw?.authorUserId ?? raw?.sender?.id ?? null,
     senderUserName: raw?.senderUserName ?? raw?.authorName ?? raw?.senderName ?? raw?.sender?.name ?? null,
+    recipientPersonId: raw?.recipientPersonId ?? raw?.recipient?.id ?? null,
+    recipientPersonName: raw?.recipientPersonName ?? raw?.recipient?.name ?? null,
+    recipientPhone: raw?.recipientPhone ?? raw?.recipient?.phone ?? null,
     direction: String(raw?.direction ?? 'PORTARIA_TO_RESIDENT'),
     origin: String(raw?.origin ?? 'PORTARIA'),
     body: String(raw?.body ?? raw?.message ?? ''),
     status: String(raw?.status ?? raw?.deliveryStatus ?? 'SENT'),
+    externalMessageId: raw?.externalMessageId ?? null,
+    externalMetadata:
+      raw?.externalMetadata && typeof raw.externalMetadata === 'object' ? (raw.externalMetadata as Record<string, unknown>) : null,
     readAt: raw?.readAt ?? raw?.read_at ?? null,
     createdAt: String(raw?.createdAt ?? raw?.created_at ?? raw?.timestamp ?? ''),
   };

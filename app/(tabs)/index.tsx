@@ -21,7 +21,7 @@ import type { AccessLog } from '../../services/accessLogs';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const quickActions = [
-  { label: 'Acessos', icon: 'people-outline', route: '/people' },
+  { label: 'Pessoas', icon: 'people-outline', route: '/people' },
   { label: 'Câmeras', icon: 'videocam-outline', route: '/cameras' },
   { label: 'Encomendas', icon: 'cube-outline', route: '/deliveries' },
   { label: 'Mensagens', icon: 'chatbubbles-outline', route: '/messages' },
@@ -56,7 +56,15 @@ export default function HomeScreen() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [facialStatus, setFacialStatus] = useState<FacialSyncStatus>({ state: 'UNKNOWN' });
-  const [realtimeBadge, setRealtimeBadge] = useState<'Atualização periódica' | 'Atualização automática'>('Atualização periódica');
+  const [realtimeBadge, setRealtimeBadge] = useState<'Atualização periódica' | 'Atualização automática'>(
+    'Atualização periódica'
+  );
+
+  const effectiveUnitId =
+    selectedUnitId ??
+    user?.selectedUnitId ??
+    user?.unitId ??
+    (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null);
 
   const loadData = useCallback(
     async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
@@ -66,30 +74,36 @@ export default function HomeScreen() {
         } else if (mode === 'initial' && !lastUpdatedAt) {
           setLoading(true);
         }
+
         setLoadError(null);
 
-        const [overview, facialData, residentsResult] =
-          await Promise.all([
-            loadResidentOverview({ logLimit: 3, messageLimit: 20, upcomingVisitsLimit: 3 }).catch(() => null),
-            facialStatusService.get().catch(
-              (): FacialSyncStatus => ({ state: 'UNKNOWN', updatedAt: null, photoUri: null })
-            ),
-            selectedUnitId ? listUnitResidents(selectedUnitId).catch(() => []) : Promise.resolve([]),
-          ]);
+        const [overview, facialData, residentsResult] = await Promise.all([
+          loadResidentOverview({ logLimit: 3, messageLimit: 20, upcomingVisitsLimit: 3 }).catch(() => null),
+          facialStatusService.get().catch(
+            (): FacialSyncStatus => ({ state: 'UNKNOWN', updatedAt: null, photoUri: null })
+          ),
+          effectiveUnitId ? listUnitResidents(effectiveUnitId).catch(() => []) : Promise.resolve([]),
+        ]);
 
-        if (selectedUnitId) {
-          notifyArrivedVisits(selectedUnitId).catch(() => undefined);
+        if (effectiveUnitId) {
+          notifyArrivedVisits(effectiveUnitId).catch(() => undefined);
         }
 
-        setSummary(overview?.alerts || null);
-        setPendingDeliveriesCount(overview?.deliveries.pending ?? 0);
-        setScheduledAccessCount(overview?.visits.scheduled ?? 0);
-        setRecentAccessLogs(overview?.accessLogs.recent ?? []);
-        setResidentCount(residentsResult.length);
-        setCameraCount(overview?.cameras.total ?? 0);
-        setUnreadNotificationsCount(overview?.notifications.unread ?? 0);
-        setUnreadMessagesCount(overview?.messages.unread ?? 0);
-        setFacialStatus(overview?.facial ?? facialData);
+        setSummary((current: any) => (overview?.alerts?.available ? overview.alerts : current));
+        setPendingDeliveriesCount((current) => (overview?.deliveries.available ? overview.deliveries.pending : current));
+        setScheduledAccessCount((current) => (overview?.visits.available ? overview.visits.scheduled : current));
+        setRecentAccessLogs((current) => {
+          if (overview?.accessLogs.available && overview.accessLogs.recent.length > 0) return overview.accessLogs.recent;
+          return overview?.accessLogs.available ? [] : current;
+        });
+        setResidentCount((current) => {
+          if (!effectiveUnitId) return 0;
+          return residentsResult.length > 0 ? residentsResult.length : current;
+        });
+        setCameraCount((current) => (overview?.cameras.available ? overview.cameras.total : current));
+        setUnreadNotificationsCount((current) => (overview?.notifications.available ? overview.notifications.unread : current));
+        setUnreadMessagesCount((current) => (overview?.messages.available ? overview.messages.unread : current));
+        setFacialStatus((current) => overview?.facial ?? facialData ?? current);
         setLastUpdatedAt(new Date());
       } catch {
         setLoadError('Não foi possível atualizar o painel agora.');
@@ -98,7 +112,7 @@ export default function HomeScreen() {
         setRefreshing(false);
       }
     },
-    [lastUpdatedAt, selectedUnitId]
+    [effectiveUnitId, lastUpdatedAt]
   );
 
   useAutoRefresh(() => loadData(lastUpdatedAt ? 'silent' : 'initial'), {
@@ -109,7 +123,9 @@ export default function HomeScreen() {
   React.useEffect(() => {
     return residentRealtimeService.subscribe((snapshot) => {
       setRealtimeBadge(
-        snapshot.status === 'prepared' || snapshot.status === 'connected' ? 'Atualização automática' : 'Atualização periódica'
+        snapshot.status === 'prepared' || snapshot.status === 'connected'
+          ? 'Atualização automática'
+          : 'Atualização periódica'
       );
     });
   }, []);
@@ -126,6 +142,8 @@ export default function HomeScreen() {
   const messagesEnabled = isResidentFeatureEnabled(residentAppConfig, 'messages');
   const vehiclesEnabled = isResidentFeatureEnabled(residentAppConfig, 'vehicles');
   const accessEnabled = isResidentFeatureEnabled(residentAppConfig, 'access');
+  const fallbackPhotoUri = facialStatus.localPhotoDataUri ?? facialStatus.localPhotoUri ?? null;
+  const effectivePhotoUri = user?.photoUri ?? facialStatus.photoUri ?? fallbackPhotoUri ?? null;
 
   const riskLabel = useMemo(() => {
     if (activeAlertsCount === 0) return 'Tudo calmo';
@@ -223,7 +241,14 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData('refresh')} tintColor={colors.primary} />}
       >
         <View style={styles.topBar}>
-          <UserAvatar name={user?.name || firstName} photoUri={user?.photoUri} size={46} textSize={20} />
+          <UserAvatar
+            name={user?.name || firstName}
+            photoUri={effectivePhotoUri}
+            fallbackPhotoUri={fallbackPhotoUri}
+            cacheKey={user?.faceUpdatedAt ?? facialStatus.updatedAt ?? effectivePhotoUri ?? fallbackPhotoUri}
+            size={46}
+            textSize={20}
+          />
           <View style={styles.greetingArea}>
             <Text style={styles.greeting}>Olá, {firstName}</Text>
             <Text style={styles.roleText}>{updatedLabel ? `Atualizado às ${updatedLabel}` : 'App Morador'}</Text>
@@ -247,12 +272,14 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity style={styles.unitPill} activeOpacity={0.85} onPress={() => setShowUnitModal(true)}>
-          <Ionicons name="business-outline" size={18} color={colors.primary} />
-          <View style={styles.unitTextArea}>
-            <Text style={styles.unitKicker}>Unidade ativa</Text>
-            <Text style={styles.unitName}>{unitLabel}</Text>
+          <View style={styles.unitHeaderRow}>
+            <Ionicons name="business-outline" size={18} color={colors.primary} />
+            <View style={styles.unitTextArea}>
+              <Text style={styles.unitKicker}>Unidade ativa</Text>
+              <Text style={styles.unitName}>{unitLabel}</Text>
+            </View>
           </View>
-          <View style={styles.unitActions}>
+          <View style={styles.unitActionsRow}>
             <TouchableOpacity
               style={styles.unitInlineAction}
               activeOpacity={0.85}
@@ -261,33 +288,34 @@ export default function HomeScreen() {
                 router.push('/unit-dashboard');
               }}
             >
-              <Text style={styles.unitInlineActionText}>Resumo</Text>
+              <Text style={styles.unitInlineActionText}>Minha unidade</Text>
             </TouchableOpacity>
             <Text style={styles.unitAction}>{realtimeBadge}</Text>
           </View>
         </TouchableOpacity>
 
-        {!selectedUnitId ? (
+        {!effectiveUnitId ? (
           <View style={styles.inlineNotice}>
             <Ionicons name="home-outline" size={18} color={colors.primary} />
-            <Text style={styles.inlineNoticeText}>Escolha uma unidade para ver câmeras, acessos, encomendas e avisos.</Text>
+            <Text style={styles.inlineNoticeText}>Escolha uma unidade para ver câmeras, pessoas, encomendas e avisos.</Text>
           </View>
         ) : null}
 
-        {!user?.photoUri ? (
-          <TouchableOpacity style={styles.photoPrompt} activeOpacity={0.86} onPress={() => router.push('/profile/edit')}>
-            <View style={styles.photoPromptIcon}>
-              <Ionicons name="camera-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.photoPromptTextArea}>
-              <Text style={styles.photoPromptTitle}>Adicione sua foto</Text>
-              <Text style={styles.photoPromptText}>
-                Sua imagem ajuda na identificação no app e prepara o cadastro para leitores faciais.
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
-          </TouchableOpacity>
-        ) : null}
+        <View style={[styles.heroCard, { backgroundColor: heroTone.background, borderColor: heroTone.border }]}>
+          <View style={styles.heroTop}>
+            <Text style={styles.heroKicker}>Segurança da unidade</Text>
+            <Ionicons name="shield-checkmark" size={20} color={heroTone.icon} />
+          </View>
+          <View style={styles.heroMainRow}>
+            <Text style={styles.heroTitle}>{riskLabel}</Text>
+            <Text style={[styles.statusPill, { borderColor: heroTone.pillBorder }]}>{securityStatus}</Text>
+          </View>
+          <Text style={styles.heroSubtitle} numberOfLines={2}>
+            {activeAlertsCount > 0
+              ? 'Veja alertas e movimentos recentes da sua unidade.'
+              : 'Painel rápido com alertas, acessos e câmeras da unidade.'}
+          </Text>
+        </View>
 
         {loadError ? (
           <View style={styles.inlineNotice}>
@@ -295,16 +323,6 @@ export default function HomeScreen() {
             <Text style={styles.inlineNoticeText}>{loadError}</Text>
           </View>
         ) : null}
-
-        <View style={[styles.heroCard, { backgroundColor: heroTone.background, borderColor: heroTone.border }]}>
-          <View style={styles.heroTop}>
-          <Text style={styles.heroKicker}>Segurança da unidade</Text>
-            <Ionicons name="shield-checkmark" size={24} color={heroTone.icon} />
-          </View>
-          <Text style={styles.heroTitle}>{riskLabel}</Text>
-          <Text style={[styles.statusPill, { borderColor: heroTone.pillBorder }]}>{securityStatus}</Text>
-          <Text style={styles.heroSubtitle}>Acompanhe alertas, acessos autorizados e câmeras da sua unidade em um só lugar.</Text>
-        </View>
 
         <View style={styles.executiveRow}>
           <TouchableOpacity style={styles.executiveCard} activeOpacity={0.86} onPress={() => router.push('/alerts')}>
@@ -316,9 +334,9 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.executiveCard}
             activeOpacity={0.86}
-            onPress={() => router.push(user?.photoUri ? '/profile/face-enrollment' : '/profile/edit')}
+            onPress={() => router.push(effectivePhotoUri ? '/profile/face-enrollment' : '/profile/edit')}
           >
-            <Text style={styles.executiveLabel}>Identificacao</Text>
+            <Text style={styles.executiveLabel}>Identificação</Text>
             <Text style={styles.executiveValue} numberOfLines={2}>
               {facialLabel}
             </Text>
@@ -346,7 +364,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.securityKicker}>Alertas ativos</Text>
             <Text style={[styles.securityValue, activeAlertsCount > 0 && styles.metricDanger]}>{activeAlertsCount}</Text>
-            <Text style={styles.securityHint}>Ver ocorrências</Text>
+              <Text style={styles.securityHint}>Ver ocorrências</Text>
           </TouchableOpacity>
 
           {accessEnabled ? (
@@ -384,6 +402,17 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={styles.unitHubCard} activeOpacity={0.88} onPress={() => router.push('/unit-dashboard')}>
+          <View style={styles.accessIcon}>
+            <Ionicons name="apps-outline" size={24} color={colors.primary} />
+          </View>
+          <View style={styles.accessTextArea}>
+            <Text style={styles.accessKicker}>Minha unidade</Text>
+            <Text style={styles.accessTitle}>Pessoas, veículos, encomendas, visitantes e câmeras da unidade</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
+        </TouchableOpacity>
+
         {accessEnabled ? (
           <TouchableOpacity style={styles.accessSpotlight} activeOpacity={0.88} onPress={() => router.push('/people')}>
             <View style={styles.accessIcon}>
@@ -412,7 +441,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.primaryAccessButton}
             activeOpacity={0.88}
-            onPress={() => router.push('/people/access-form?type=VISITOR')}
+            onPress={() => router.push('/people/access-form')}
           >
             <Ionicons name="add-circle-outline" size={22} color={colors.white} />
             <Text style={styles.primaryAccessButtonText}>Autorizar novo acesso</Text>
@@ -421,39 +450,39 @@ export default function HomeScreen() {
 
         {accessEnabled ? (
           <View style={styles.recentAccessCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Últimos acessos</Text>
-            <TouchableOpacity onPress={() => router.push('/people/access-history')}>
-              <Text style={styles.sectionLink}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          {recentAccessLogs.length > 0 ? (
-            recentAccessLogs.map((log) => (
-              <TouchableOpacity
-                key={log.id}
-                style={styles.recentAccessRow}
-                activeOpacity={0.86}
-                onPress={() => router.push('/people/access-history')}
-              >
-                <View style={styles.recentAccessIcon}>
-                  <Ionicons
-                    name={log.result === 'DENIED' ? 'close-circle-outline' : log.direction === 'EXIT' ? 'exit-outline' : 'enter-outline'}
-                    size={18}
-                    color={log.result === 'DENIED' ? colors.danger : colors.primary}
-                  />
-                </View>
-                <View style={styles.recentAccessTextArea}>
-                  <Text style={styles.recentAccessName}>{log.personName || log.classificationLabel || 'Acesso registrado'}</Text>
-                  <Text style={styles.recentAccessMeta}>{formatShortDate(log.timestamp)}</Text>
-                </View>
-                <Text style={styles.recentAccessStatus}>
-                  {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saída' : 'Entrada'}
-                </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Últimos acessos</Text>
+              <TouchableOpacity onPress={() => router.push('/people/access-history')}>
+                <Text style={styles.sectionLink}>Ver todos</Text>
               </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.emptyInlineText}>Nenhum acesso registrado recentemente.</Text>
-          )}
+            </View>
+            {recentAccessLogs.length > 0 ? (
+              recentAccessLogs.map((log) => (
+                <TouchableOpacity
+                  key={log.id}
+                  style={styles.recentAccessRow}
+                  activeOpacity={0.86}
+                  onPress={() => router.push('/people/access-history')}
+                >
+                  <View style={styles.recentAccessIcon}>
+                    <Ionicons
+                      name={log.result === 'DENIED' ? 'close-circle-outline' : log.direction === 'EXIT' ? 'exit-outline' : 'enter-outline'}
+                      size={18}
+                      color={log.result === 'DENIED' ? colors.danger : colors.primary}
+                    />
+                  </View>
+                  <View style={styles.recentAccessTextArea}>
+                    <Text style={styles.recentAccessName}>{log.personName || log.classificationLabel || 'Acesso registrado'}</Text>
+                    <Text style={styles.recentAccessMeta}>{formatShortDate(log.timestamp)}</Text>
+                  </View>
+                  <Text style={styles.recentAccessStatus}>
+                    {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saída' : 'Entrada'}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.emptyInlineText}>Nenhum acesso registrado recentemente.</Text>
+            )}
           </View>
         ) : null}
 
@@ -548,41 +577,26 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   inlineNoticeText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: '700' },
-  photoPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
-  },
-  photoPromptIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoPromptTextArea: { flex: 1 },
-  photoPromptTitle: { color: colors.text, fontSize: 14, fontWeight: '900', marginBottom: 3 },
-  photoPromptText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   unitPill: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
     padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     marginBottom: 14,
   },
+  unitHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   unitTextArea: { flex: 1 },
-  unitActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  unitActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   unitInlineAction: {
     height: 32,
     borderRadius: 8,
@@ -595,26 +609,24 @@ const styles = StyleSheet.create({
   },
   unitInlineActionText: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   unitKicker: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  unitName: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 2 },
-  unitAction: { color: colors.primary, fontSize: 12, fontWeight: '900' },
-  heroCard: { borderRadius: 8, padding: 16, marginBottom: 14, borderWidth: 1 },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  unitName: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 2, lineHeight: 22 },
+  unitAction: { color: colors.primary, fontSize: 12, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
+  heroCard: { borderRadius: 8, padding: 14, marginBottom: 14, borderWidth: 1 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  heroMainRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   heroKicker: { color: 'rgba(255,255,255,0.78)', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  heroTitle: { color: colors.white, fontSize: 24, fontWeight: '900', marginBottom: 6 },
+  heroTitle: { flex: 1, color: colors.white, fontSize: 20, fontWeight: '900' },
   statusPill: {
-    alignSelf: 'flex-start',
     color: colors.white,
     fontSize: 12,
     fontWeight: '900',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.38)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    marginBottom: 10,
     overflow: 'hidden',
   },
-  heroSubtitle: { color: 'rgba(255,255,255,0.82)', fontSize: 14, lineHeight: 20, textAlign: 'justify' },
+  heroSubtitle: { color: 'rgba(255,255,255,0.82)', fontSize: 13, lineHeight: 18 },
   executiveRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   executiveCard: {
     flex: 1,
@@ -675,6 +687,17 @@ const styles = StyleSheet.create({
   signalItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   signalValue: { color: colors.text, fontSize: 20, fontWeight: '900', textAlign: 'center' },
   signalLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '800', textAlign: 'center', marginTop: 2 },
+  unitHubCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 14,
+  },
   accessSpotlight: {
     backgroundColor: colors.surface,
     borderRadius: 8,
@@ -774,4 +797,3 @@ const styles = StyleSheet.create({
   },
   quickLabel: { color: colors.text, fontSize: 12, fontWeight: '800', textAlign: 'center' },
 });
-

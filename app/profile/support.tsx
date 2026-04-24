@@ -9,6 +9,7 @@ import PrimaryButton from '../../components/PrimaryButton';
 import { BRAND } from '../../constants/brand';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { facialStatusService, type FacialSyncStatus } from '../../services/facialStatus';
 import { hapticFeedback } from '../../services/haptics';
 import { useAuthStore } from '../../store/useAuthStore';
 import { displayEmail } from '../../utils/privacy';
@@ -18,26 +19,35 @@ export default function SupportScreen() {
   const selectedUnitId = useAuthStore((state) => state.selectedUnitId);
   const selectedUnitName = useAuthStore((state) => state.selectedUnitName);
   const [copying, setCopying] = useState(false);
+  const [facialStatus, setFacialStatus] = useState<FacialSyncStatus>({ state: 'UNKNOWN' });
+  const effectivePhotoUri = user?.photoUri ?? facialStatus.photoUri ?? null;
+
+  React.useEffect(() => {
+    facialStatusService
+      .get()
+      .then((status) => setFacialStatus(status))
+      .catch(() => setFacialStatus({ state: 'UNKNOWN' }));
+  }, []);
 
   const supportText = useMemo(() => {
     return [
       'Suporte app morador',
-      `Nome: ${user?.name || 'Não informado'}`,
+      `Nome: ${user?.name || 'Nao informado'}`,
       `E-mail: ${displayEmail(user?.email, 'SUPPORT_EXPORT')}`,
-      `Perfil: ${user?.role || 'Não informado'}`,
-      `Unidade: ${selectedUnitName || user?.unitName || 'Não informada'}`,
-      `Foto cadastrada: ${user?.photoUri ? 'Sim' : 'Não'}`,
-      `Referência da unidade: ${selectedUnitId || user?.unitId || 'Não informado'}`,
-      `Referência da conta: ${user?.id || 'Não informado'}`,
-      `Referência do cadastro: ${user?.personId || 'Não informado'}`,
-      `Escopo atual: ${user?.scopeType || 'Não informado'}`,
-      `Permissões efetivas publicadas: ${user?.effectiveAccess ? Object.keys(user.effectiveAccess).length : 0}`,
-      `Versão legal aceita: ${acceptedTermsVersion || 'Não registrada'}`,
-      `Versão legal vigente: ${currentTermsVersion || 'Não publicada'}`,
+      `Perfil: ${user?.role || 'Nao informado'}`,
+      `Unidade: ${selectedUnitName || user?.unitName || 'Nao informada'}`,
+      `Foto cadastrada: ${effectivePhotoUri ? 'Sim' : 'Nao'}`,
+      `Referencia da unidade: ${selectedUnitId || user?.unitId || 'Nao informado'}`,
+      `Referencia da conta: ${user?.id || 'Nao informado'}`,
+      `Referencia do cadastro: ${user?.personId || 'Nao informado'}`,
+      `Escopo atual: ${user?.scopeType || 'Nao informado'}`,
+      `Permissoes efetivas publicadas: ${user?.effectiveAccess ? Object.keys(user.effectiveAccess).length : 0}`,
+      `Versao legal aceita: ${acceptedTermsVersion || 'Nao registrada'}`,
+      `Versao legal vigente: ${currentTermsVersion || 'Nao publicada'}`,
       `Canal de suporte: ${BRAND.supportContextLabel}`,
       `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
     ].join('\n');
-  }, [acceptedTermsVersion, currentTermsVersion, selectedUnitId, selectedUnitName, user]);
+  }, [acceptedTermsVersion, currentTermsVersion, effectivePhotoUri, selectedUnitId, selectedUnitName, user]);
 
   async function copySupportData() {
     try {
@@ -47,7 +57,7 @@ export default function SupportScreen() {
       Alert.alert('Dados copiados', 'Envie estes dados para o suporte identificar sua conta.');
     } catch {
       hapticFeedback.error();
-      Alert.alert('Erro', 'Não foi possível copiar os dados agora.');
+      Alert.alert('Erro', 'Nao foi possivel copiar os dados agora.');
     } finally {
       setCopying(false);
     }
@@ -62,7 +72,7 @@ export default function SupportScreen() {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      Alert.alert('E-mail indisponível', `Envie uma mensagem para ${BRAND.supportEmail}.`);
+      Alert.alert('E-mail indisponivel', `Envie uma mensagem para ${BRAND.supportEmail}.`);
     }
   }
 
@@ -70,7 +80,7 @@ export default function SupportScreen() {
     const message = encodeURIComponent(`${supportText}\n\nProblema: ${problem || 'Descreva o problema aqui'}`);
     const url = `https://wa.me/${BRAND.supportWhatsApp}?text=${message}`;
     await Linking.openURL(url).catch(() => {
-      Alert.alert('WhatsApp indisponível', 'Copie os dados e envie pelo canal de suporte.');
+      Alert.alert('WhatsApp indisponivel', 'Copie os dados e envie pelo canal de suporte.');
     });
   }
 
@@ -95,7 +105,7 @@ export default function SupportScreen() {
           <Ionicons name="headset-outline" size={30} color={colors.primary} />
           <Text style={styles.heroTitle}>{BRAND.supportTitle}</Text>
           <Text style={styles.heroText}>
-            Envie os dados da sua conta junto com o relato do problema para agilizar a análise da sua unidade.
+            Envie os dados da sua conta junto com o relato do problema para agilizar a analise da sua unidade.
           </Text>
         </View>
 
@@ -107,17 +117,17 @@ export default function SupportScreen() {
         </View>
 
         <View style={styles.card}>
-          <InfoRow label="Unidade" value={selectedUnitName || user?.unitName || 'Não informada'} />
+          <InfoRow label="Unidade" value={selectedUnitName || user?.unitName || 'Nao informada'} />
           <InfoRow label="Perfil" value={getProfileLabel(user?.role)} />
           <InfoRow label="E-mail" value={displayEmail(user?.email, 'SUPPORT_EXPORT')} />
-          <InfoRow label="Foto cadastrada" value={user?.photoUri ? 'Sim' : 'Não'} />
+          <InfoRow label="Foto cadastrada" value={effectivePhotoUri ? 'Sim' : 'Nao'} />
         </View>
 
         <PrimaryButton title="Copiar dados para suporte" loading={copying} onPress={copySupportData} />
 
         <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85} onPress={copySupportData}>
           <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={styles.secondaryButtonText}>Copiar relatório do atendimento</Text>
+          <Text style={styles.secondaryButtonText}>Copiar relatorio do atendimento</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85} onPress={() => sendEmail()}>
@@ -132,31 +142,28 @@ export default function SupportScreen() {
 
         <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85} onPress={() => router.push('/profile/diagnostics')}>
           <Ionicons name="pulse-outline" size={20} color={colors.primary} />
-          <Text style={styles.secondaryButtonText}>Abrir diagnósticos locais</Text>
+          <Text style={styles.secondaryButtonText}>Abrir diagnosticos locais</Text>
         </TouchableOpacity>
 
         <View style={styles.issueGrid}>
-          <TouchableOpacity style={styles.issueButton} onPress={() => sendEmail('Câmera não aparece ou fica com imagem preta.')}>
+          <TouchableOpacity style={styles.issueButton} onPress={() => sendEmail('Camera nao aparece ou fica com imagem preta.')}>
             <Ionicons name="videocam-outline" size={18} color={colors.primary} />
-            <Text style={styles.issueButtonText}>Problema com câmera</Text>
+            <Text style={styles.issueButtonText}>Problema com camera</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.issueButton} onPress={() => sendEmail('Encomenda não aparece para o morador.')}>
+          <TouchableOpacity style={styles.issueButton} onPress={() => sendEmail('Encomenda nao aparece para o morador.')}>
             <Ionicons name="cube-outline" size={18} color={colors.primary} />
             <Text style={styles.issueButtonText}>Problema com encomenda</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.issueButton}
-            onPress={() => sendEmail('Acesso de visitante, prestador ou locatário não funcionou.')}
-          >
+          <TouchableOpacity style={styles.issueButton} onPress={() => sendEmail('Acesso de visitante, prestador ou locatario nao funcionou.')}>
             <Ionicons name="walk-outline" size={18} color={colors.primary} />
             <Text style={styles.issueButtonText}>Problema com acesso</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>Para câmeras e encomendas</Text>
+          <Text style={styles.noteTitle}>Para cameras e encomendas</Text>
           <Text style={styles.noteText}>
-            Informe o que aconteceu e, se possível, envie uma imagem da tela para facilitar o atendimento.
+            Informe o que aconteceu e, se possivel, envie uma imagem da tela para facilitar o atendimento.
           </Text>
         </View>
       </ScrollView>
@@ -196,7 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   heroTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 12 },
-  heroText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 8, textAlign: 'justify' },
+  heroText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 8 },
   tipCard: {
     flexDirection: 'row',
     gap: 10,
@@ -208,7 +215,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
   },
-  tipText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19, textAlign: 'justify' },
+  tipText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 8,
@@ -242,7 +249,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   noteTitle: { color: colors.text, fontSize: 14, fontWeight: '900', marginBottom: 6 },
-  noteText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, textAlign: 'justify' },
+  noteText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   issueGrid: { gap: 10, marginTop: 12 },
   issueButton: {
     flexDirection: 'row',

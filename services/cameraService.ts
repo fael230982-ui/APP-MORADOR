@@ -49,14 +49,13 @@ function getPreferredStillUrl(values: { snapshotUrl?: string | null; thumbnailUr
 }
 
 function getPreferredLiveUrl(values: {
-  webRtcUrl?: string | null;
   hlsUrl?: string | null;
   imageStreamUrl?: string | null;
   mjpegUrl?: string | null;
   liveUrl?: string | null;
   streamUrl?: string | null;
 }) {
-  return values.webRtcUrl || values.hlsUrl || values.imageStreamUrl || values.mjpegUrl || values.liveUrl || values.streamUrl || null;
+  return values.hlsUrl || values.imageStreamUrl || values.mjpegUrl || values.liveUrl || values.streamUrl || null;
 }
 
 function normalizeCamera(raw: any): Camera {

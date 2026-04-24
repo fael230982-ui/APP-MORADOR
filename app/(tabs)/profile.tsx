@@ -32,6 +32,8 @@ export default function ProfileScreen() {
   const residentAccessAllowed = isResidentFeatureEnabled(residentAppConfig, 'access');
   const camerasEnabled = isResidentFeatureEnabled(residentAppConfig, 'cameras');
   const messagesEnabled = isResidentFeatureEnabled(residentAppConfig, 'messages');
+  const fallbackPhotoUri = facialStatus.localPhotoDataUri ?? facialStatus.localPhotoUri ?? null;
+  const effectivePhotoUri = user?.photoUri ?? facialStatus.photoUri ?? fallbackPhotoUri ?? null;
 
   const loadProfileCounters = useCallback(async () => {
     const [overview, faceStatus] = await Promise.all([
@@ -41,8 +43,8 @@ export default function ProfileScreen() {
       ),
     ]);
 
-    setUnreadNotificationsCount(overview?.notifications.unread ?? 0);
-    setUnreadMessagesCount(overview?.messages.unread ?? 0);
+    setUnreadNotificationsCount((current) => (overview?.notifications.available ? overview.notifications.unread : current));
+    setUnreadMessagesCount((current) => (overview?.messages.available ? overview.messages.unread : current));
     setFacialStatus(overview?.facial ?? faceStatus);
   }, []);
 
@@ -50,6 +52,13 @@ export default function ProfileScreen() {
     intervalMs: 45000,
     topics: ['overview', 'profile', 'messages', 'notifications', 'unit', 'realtime'],
   });
+
+  React.useEffect(() => {
+    facialStatusService
+      .get()
+      .then((status) => setFacialStatus(status))
+      .catch(() => setFacialStatus({ state: 'UNKNOWN' }));
+  }, []);
 
   React.useEffect(() => {
     return residentRealtimeService.subscribe((snapshot) => {
@@ -67,7 +76,9 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <UserAvatar
           name={user?.name}
-          photoUri={user?.photoUri}
+          photoUri={effectivePhotoUri}
+          fallbackPhotoUri={fallbackPhotoUri}
+          cacheKey={user?.faceUpdatedAt ?? facialStatus.updatedAt ?? effectivePhotoUri ?? fallbackPhotoUri}
           size={86}
           textSize={28}
           iconFallback={<Ionicons name="person" size={42} color={colors.white} />}
@@ -99,14 +110,12 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {!user?.photoUri ? (
+      {!effectivePhotoUri ? (
         <TouchableOpacity style={styles.warningCard} activeOpacity={0.86} onPress={() => router.push('/profile/edit')}>
           <Ionicons name="camera-outline" size={20} color={colors.warning} />
           <View style={styles.warningTextArea}>
             <Text style={styles.warningTitle}>Foto ainda não cadastrada</Text>
-            <Text style={styles.warningText}>
-              Cadastre uma foto recente para melhorar a identificação no app e nos fluxos faciais.
-            </Text>
+            <Text style={styles.warningText}>Cadastre uma foto recente para melhorar sua identificação no app.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
         </TouchableOpacity>
@@ -116,7 +125,7 @@ export default function ProfileScreen() {
         <InfoLine label="Nome" value={user?.name || 'Morador'} />
         <InfoLine label="E-mail" value={displayEmail(user?.email, 'SHARED_SUMMARY')} />
         <InfoLine label="Perfil" value={profileLabel} />
-        <InfoLine label="Foto" value={user?.photoUri ? 'Cadastrada' : 'Pendente'} />
+        <InfoLine label="Foto" value={effectivePhotoUri ? 'Cadastrada' : 'Pendente'} />
         <InfoLine label="Biometria facial" value={getFacialStatusLabel(facialStatus)} />
         <InfoLine label="Atualização" value={realtimeReady ? 'Atualização automática ativa' : 'Atualização periódica'} />
         <InfoLine
@@ -130,7 +139,7 @@ export default function ProfileScreen() {
         <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
         <View style={styles.menuTextArea}>
           <Text style={styles.menuTitle}>Dados do perfil</Text>
-          <Text style={styles.menuSubtitle}>Nome, e-mail e telefone da conta</Text>
+          <Text style={styles.menuSubtitle}>Nome, e-mail, telefone e foto da conta</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
       </TouchableOpacity>
@@ -159,7 +168,7 @@ export default function ProfileScreen() {
           <Ionicons name="people-outline" size={22} color={colors.primary} />
           <View style={styles.menuTextArea}>
             <Text style={styles.menuTitle}>Pessoas autorizadas</Text>
-            <Text style={styles.menuSubtitle}>Acessos, visitantes e pessoas liberadas pela unidade</Text>
+            <Text style={styles.menuSubtitle}>Visitantes, prestadores, locatários e moradores vinculados</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
         </TouchableOpacity>
@@ -170,7 +179,7 @@ export default function ProfileScreen() {
           <Ionicons name="chatbubbles-outline" size={22} color={colors.primary} />
           <View style={styles.menuTextArea}>
             <Text style={styles.menuTitle}>Mensagens com a portaria</Text>
-            <Text style={styles.menuSubtitle}>Conversas da sua unidade</Text>
+          <Text style={styles.menuSubtitle}>Conversas da sua unidade</Text>
           </View>
           {unreadMessagesCount > 0 ? <CountBadge value={unreadMessagesCount} /> : null}
           <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
@@ -312,7 +321,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 6 },
   infoValue: { color: colors.text, fontSize: 18, fontWeight: '900' },
-  infoHint: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 8, textAlign: 'justify' },
+  infoHint: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 8 },
   warningCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,7 +335,7 @@ const styles = StyleSheet.create({
   },
   warningTextArea: { flex: 1 },
   warningTitle: { color: colors.text, fontSize: 14, fontWeight: '900', marginBottom: 3 },
-  warningText: { color: colors.text, fontSize: 12, lineHeight: 18, textAlign: 'justify' },
+  warningText: { color: colors.text, fontSize: 12, lineHeight: 18 },
   profileDetails: {
     backgroundColor: colors.surface,
     borderRadius: 8,
@@ -351,7 +360,7 @@ const styles = StyleSheet.create({
   },
   menuTextArea: { flex: 1 },
   menuTitle: { color: colors.text, fontSize: 15, fontWeight: '900' },
-  menuSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18, textAlign: 'justify' },
+  menuSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 3, lineHeight: 18 },
   countBadge: {
     minWidth: 24,
     height: 24,

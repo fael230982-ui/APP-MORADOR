@@ -17,18 +17,22 @@ export default function ConsentModal({ visible, onAccept }: Props) {
         <Text style={styles.title}>Privacidade e uso de dados</Text>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.text}>
-            Para usar o app, tratamos dados da conta, notificações, acessos e biometria facial quando você optar por esse recurso.
+            Para usar o app, tratamos dados da conta, notificações, acessos e biometria facial quando você optar por esse
+            recurso.
           </Text>
 
           <View style={styles.list}>
             <Text style={styles.item}>
-              <Text style={styles.bold}>Biometria facial:</Text> usada para identificação automatizada nos fluxos de acesso, quando habilitada.
+              <Text style={styles.bold}>Biometria facial:</Text> usada para identificação automatizada nos fluxos de acesso,
+              quando habilitada.
             </Text>
             <Text style={styles.item}>
-              <Text style={styles.bold}>Notificações e acessos:</Text> usados para encomendas, visitas, alertas e histórico operacional.
+              <Text style={styles.bold}>Notificações e acessos:</Text> usados para encomendas, visitas, alertas e histórico
+              operacional.
             </Text>
             <Text style={styles.item}>
-              <Text style={styles.bold}>Minimização:</Text> documentos e telefones passam a ser exibidos de forma parcial quando o detalhe completo não for essencial.
+              <Text style={styles.bold}>Minimização:</Text> documentos e telefones passam a ser exibidos de forma parcial quando o
+              detalhe completo não for essencial.
             </Text>
           </View>
 

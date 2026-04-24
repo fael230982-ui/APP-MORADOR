@@ -19,7 +19,11 @@ import FeatureLockedState from '../components/FeatureLockedState';
 import UnitSelectionModal from '../components/UnitSelectionModal';
 import { colors } from '../constants/colors';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { operationMessagesService, type OperationMessage } from '../services/operationMessages';
+import {
+  isUnreadIncomingOperationMessage,
+  operationMessagesService,
+  type OperationMessage,
+} from '../services/operationMessages';
 import { isResidentFeatureEnabled } from '../services/residentFeatureAccess';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -28,6 +32,33 @@ function formatTime(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function getOriginBadge(origin?: string | null) {
+  if (origin === 'WHATSAPP') {
+    return {
+      label: 'WhatsApp',
+      icon: 'logo-whatsapp' as const,
+      color: colors.success,
+      backgroundColor: colors.successSoft,
+    };
+  }
+
+  if (origin === 'APP') {
+    return {
+      label: 'App',
+      icon: 'phone-portrait-outline' as const,
+      color: colors.info,
+      backgroundColor: colors.cardSoft,
+    };
+  }
+
+  return {
+    label: 'Portaria',
+    icon: 'business-outline' as const,
+    color: colors.textMuted,
+    backgroundColor: colors.cardSoft,
+  };
 }
 
 export default function MessagesScreen() {
@@ -47,23 +78,29 @@ export default function MessagesScreen() {
     [messages]
   );
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
     if (!selectedUnitId) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (mode !== 'silent') {
+        setLoading(true);
+      }
       setError(null);
       const result = await operationMessagesService.list(selectedUnitId, { limit: 50 });
       setMessages(result);
 
-      await Promise.all(
-        result
-          .filter((item) => item.direction === 'PORTARIA_TO_RESIDENT' && !item.readAt)
-          .map((item) => operationMessagesService.markRead(item.id).catch(() => null))
-      );
+      const unreadIncomingIds = result.filter(isUnreadIncomingOperationMessage).map((item) => item.id);
+      if (unreadIncomingIds.length > 0) {
+        await Promise.all(unreadIncomingIds.map((id) => operationMessagesService.markRead(id).catch(() => null)));
+        setMessages((current) =>
+          current.map((item) =>
+            unreadIncomingIds.includes(item.id) ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item
+          )
+        );
+      }
     } catch (err: any) {
       setError(
         err?.response?.status === 403
@@ -75,7 +112,11 @@ export default function MessagesScreen() {
     }
   }, [selectedUnitId]);
 
-  useAutoRefresh(loadMessages, { enabled: !!selectedUnitId, intervalMs: 15000, topics: ['messages', 'unit', 'realtime'] });
+  useAutoRefresh(() => loadMessages(messages.length > 0 ? 'silent' : 'initial'), {
+    enabled: !!selectedUnitId,
+    intervalMs: 15000,
+    topics: ['messages', 'unit', 'realtime'],
+  });
 
   async function handleSend() {
     const body = draft.trim();
@@ -190,7 +231,7 @@ export default function MessagesScreen() {
             data={sortedMessages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={sortedMessages.length ? styles.list : styles.emptyList}
-            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadMessages} tintColor={colors.primary} />}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={() => loadMessages('refresh')} tintColor={colors.primary} />}
             ListEmptyComponent={
               <EmptyState
                 icon="chatbubbles-outline"
@@ -200,11 +241,45 @@ export default function MessagesScreen() {
             }
             renderItem={({ item }) => {
               const mine = item.direction === 'RESIDENT_TO_PORTARIA';
+              const originBadge = getOriginBadge(item.origin);
+              const senderLabel = mine
+                ? 'Voce'
+                : item.origin === 'WHATSAPP'
+                  ? `Portaria via ${originBadge.label}`
+                  : item.senderUserName || 'Portaria';
+              const statusLabel = mine
+                ? item.status === 'UNREAD'
+                  ? 'Aguardando leitura'
+                  : item.status === 'READ'
+                    ? 'Lida pela portaria'
+                    : null
+                : !item.readAt
+                  ? 'Nova'
+                  : 'Recebida';
+
               return (
                 <View style={[styles.messageBubble, mine ? styles.myMessage : styles.portariaMessage]}>
-                  <Text style={[styles.messageSender, mine && styles.myMessageSender]}>{mine ? 'Voce' : item.senderUserName || 'Portaria'}</Text>
+                  <View style={styles.messageMetaRow}>
+                    <Text style={[styles.messageSender, mine && styles.myMessageSender]}>{senderLabel}</Text>
+                    <View
+                      style={[
+                        styles.originBadge,
+                        { backgroundColor: mine ? 'rgba(255,255,255,0.18)' : originBadge.backgroundColor },
+                      ]}
+                    >
+                      <Ionicons name={originBadge.icon} size={11} color={mine ? colors.white : originBadge.color} />
+                      <Text style={[styles.originBadgeText, mine ? styles.myOriginBadgeText : { color: originBadge.color }]}>
+                        {originBadge.label}
+                      </Text>
+                    </View>
+                  </View>
                   <Text style={[styles.messageBody, mine && styles.myMessageBody]}>{item.body}</Text>
-                  <Text style={[styles.messageTime, mine && styles.myMessageTime]}>{formatTime(item.createdAt)}</Text>
+                  <View style={styles.messageFooter}>
+                    <Text style={[styles.messageTime, mine && styles.myMessageTime]}>{formatTime(item.createdAt)}</Text>
+                    {statusLabel ? (
+                      <Text style={[styles.messageStatus, mine && styles.myMessageTime]}>{statusLabel}</Text>
+                    ) : null}
+                  </View>
                 </View>
               );
             }}
@@ -266,11 +341,24 @@ const styles = StyleSheet.create({
   messageBubble: { maxWidth: '86%', borderRadius: 8, padding: 12, marginBottom: 10, borderWidth: 1 },
   portariaMessage: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderColor: colors.border },
   myMessage: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderColor: colors.primary },
+  messageMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4 },
   messageSender: { color: colors.textMuted, fontSize: 11, fontWeight: '900', marginBottom: 4 },
   myMessageSender: { color: 'rgba(255,255,255,0.76)' },
+  originBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  originBadgeText: { fontSize: 10, fontWeight: '900' },
+  myOriginBadgeText: { color: colors.white },
   messageBody: { color: colors.text, fontSize: 14, lineHeight: 19 },
   myMessageBody: { color: colors.white },
+  messageFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 7 },
   messageTime: { color: colors.textSubtle, fontSize: 11, marginTop: 7, fontWeight: '700' },
+  messageStatus: { color: colors.textSubtle, fontSize: 11, fontWeight: '700' },
   myMessageTime: { color: 'rgba(255,255,255,0.72)' },
   inputBar: {
     flexDirection: 'row',

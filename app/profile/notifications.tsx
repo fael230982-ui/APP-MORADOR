@@ -10,10 +10,7 @@ import {
   type ResidentNotificationPreferencesRecord,
   type ResidentNotificationPriority,
 } from '../../services/residentNotificationPreferences';
-import {
-  getNotificationSoundDefinition,
-  type NotificationSoundProfile,
-} from '../../types/notificationSound';
+import { getNotificationSoundDefinition, type NotificationSoundProfile } from '../../types/notificationSound';
 import {
   DEFAULT_LOCAL_NOTIFICATION_PREFS,
   getLocalNotificationPrefs,
@@ -37,7 +34,7 @@ const TEST_NOTIFICATION_PRESETS: Record<
   alerts: {
     profile: 'ALERT',
     title: 'Teste de alerta',
-    message: 'Este teste simula um aviso crítico da unidade.',
+    message: 'Este teste simula um aviso critico da unidade.',
     data: { type: 'SECURITY_ALERT' },
   },
   deliveries: {
@@ -60,8 +57,8 @@ const TEST_NOTIFICATION_PRESETS: Record<
   },
   cameras: {
     profile: 'CAMERA',
-    title: 'Teste de câmera',
-    message: 'Este teste simula um evento ligado à câmera e à evidência.',
+    title: 'Teste de camera',
+    message: 'Este teste simula um evento ligado a camera e a evidencia.',
     data: { type: 'CAMERA_EVENT' },
   },
 };
@@ -74,17 +71,17 @@ const SOUND_MODE_OPTIONS: {
   {
     value: 'CUSTOM',
     label: 'Personalizado',
-    description: 'Usa o som temático daquela categoria neste aparelho.',
+    description: 'Usa o som tematico daquela categoria neste aparelho.',
   },
   {
     value: 'DEFAULT',
-    label: 'Padrão',
-    description: 'Mantém o aviso com o som padrão do aparelho.',
+    label: 'Padrao',
+    description: 'Mantem o aviso com o som padrao do aparelho.',
   },
   {
     value: 'SILENT',
     label: 'Silencioso',
-    description: 'Mostra a notificação sem tocar som.',
+    description: 'Mostra a notificacao sem tocar som.',
   },
 ];
 
@@ -96,12 +93,12 @@ const REMOTE_CHANNEL_OPTIONS: {
   {
     value: 'PUSH',
     label: 'Push',
-    description: 'Canal principal para avisos rápidos no celular.',
+    description: 'Canal principal para avisos rapidos no celular.',
   },
   {
     value: 'APP',
     label: 'App',
-    description: 'Mantém a preferência geral do aplicativo como prioridade.',
+    description: 'Mantem a preferencia geral do aplicativo como prioridade.',
   },
   {
     value: 'EMAIL',
@@ -118,17 +115,17 @@ const REMOTE_PRIORITY_OPTIONS: {
   {
     value: 'LOW',
     label: 'Baixa',
-    description: 'Menor urgência geral para avisos da conta.',
+    description: 'Menor urgencia geral para avisos da conta.',
   },
   {
     value: 'MEDIUM',
-    label: 'Média',
-    description: 'Equilíbrio entre volume e prioridade operacional.',
+    label: 'Media',
+    description: 'Equilibrio entre volume e prioridade operacional.',
   },
   {
     value: 'HIGH',
     label: 'Alta',
-    description: 'Prioriza aviso rápido para eventos importantes da unidade.',
+    description: 'Prioriza aviso rapido para eventos importantes da unidade.',
   },
 ];
 
@@ -145,15 +142,23 @@ export default function NotificationSettings() {
   useEffect(() => {
     Promise.all([
       getLocalNotificationPrefs().catch(() => DEFAULT_LOCAL_NOTIFICATION_PREFS),
-      residentNotificationPreferencesService.getCurrentPreferences().catch(() => null),
+      residentNotificationPreferencesService
+        .getCurrentPreferences()
+        .then((remote) => ({ remote, failed: false }))
+        .catch(() => ({ remote: null, failed: true })),
     ])
-      .then(([stored, remote]) => {
+      .then(([stored, remoteResult]) => {
         setPrefs(stored);
 
-        if (remote) {
-          setRemotePrefs(remote);
-          setRemoteChannelDraft(remote.channel);
-          setRemotePriorityDraft(remote.priority);
+        if (remoteResult.failed) {
+          setRemoteSupported(false);
+          return;
+        }
+
+        if (remoteResult.remote) {
+          setRemotePrefs(remoteResult.remote);
+          setRemoteChannelDraft(remoteResult.remote.channel);
+          setRemotePriorityDraft(remoteResult.remote.priority);
         }
       })
       .finally(() => setLoaded(true));
@@ -170,10 +175,16 @@ export default function NotificationSettings() {
     }
 
     if (remoteSupported) {
-      return 'A conta ainda não retornou uma preferência remota salva.';
+      return 'A conta ainda nao retornou uma preferencia remota salva.';
     }
 
-    return 'A rota remota ainda não está disponível neste ambiente.';
+    return 'A rota remota falhou neste ambiente. O app segue usando apenas as preferencias locais deste aparelho.';
+  }, [remotePrefs, remoteSupported]);
+
+  const remoteHealthLabel = useMemo(() => {
+    if (remotePrefs) return 'Sincronizacao remota ativa';
+    if (remoteSupported) return 'Conta sem preferencia remota salva';
+    return 'Fallback local ativo';
   }, [remotePrefs, remoteSupported]);
 
   const updateMode = (key: SoundCategoryKey, mode: NotificationCategorySoundMode) => {
@@ -195,8 +206,8 @@ export default function NotificationSettings() {
       if (!saved) {
         setRemoteSupported(false);
         Alert.alert(
-          'Preferência remota indisponível',
-          'Este ambiente ainda não publicou a rota oficial de preferências remotas.'
+          'Preferencia remota indisponivel',
+          'Este ambiente ainda nao publicou a rota oficial de preferencias remotas.'
         );
         return;
       }
@@ -205,9 +216,10 @@ export default function NotificationSettings() {
       setRemotePrefs(saved);
       setRemoteChannelDraft(saved.channel);
       setRemotePriorityDraft(saved.priority);
-      Alert.alert('Preferência salva', 'A preferência geral da conta foi atualizada com sucesso.');
+      Alert.alert('Preferencia salva', 'A preferencia geral da conta foi atualizada com sucesso.');
     } catch {
-      Alert.alert('Não foi possível salvar', 'O backend não confirmou a atualização da preferência remota.');
+      setRemoteSupported(false);
+      Alert.alert('Nao foi possivel salvar', 'O backend nao confirmou a atualizacao da preferencia remota.');
     } finally {
       setRemoteSaving(false);
     }
@@ -229,7 +241,7 @@ export default function NotificationSettings() {
         { profile: preset.profile }
       );
     } catch {
-      Alert.alert('Não foi possível testar', 'O aparelho não permitiu disparar a notificação de teste.');
+      Alert.alert('Nao foi possivel testar', 'O aparelho nao permitiu disparar a notificacao de teste.');
     } finally {
       setTestingKey(null);
     }
@@ -240,7 +252,7 @@ export default function NotificationSettings() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Notificações',
+          headerTitle: 'Notificacoes',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerLeft: () => (
@@ -255,28 +267,39 @@ export default function NotificationSettings() {
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>Sons por categoria</Text>
           <Text style={styles.noticeText}>
-            Cada categoria pode usar som personalizado, som padrão ou modo silencioso. O aviso continua chegando mesmo
-            quando o som temático estiver desligado.
+            Cada categoria pode usar som personalizado, som padrao ou modo silencioso. O aviso continua chegando mesmo
+            quando o som tematico estiver desligado.
           </Text>
         </View>
 
         <View style={styles.tipCard}>
           <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
           <Text style={styles.tipText}>
-            Os sons abaixo continuam sendo configurados neste aparelho. A API atual publica uma preferência remota mais
+            Os sons abaixo continuam sendo configurados neste aparelho. A API atual publica uma preferencia remota mais
             geral por conta, sem substituir essa granularidade por categoria.
           </Text>
         </View>
 
+        {!remoteSupported ? (
+          <View style={styles.notice}>
+            <Text style={styles.noticeTitle}>Preferencia remota indisponivel</Text>
+            <Text style={styles.noticeText}>
+              O backend nao confirmou a leitura das preferencias remotas da conta. Este aparelho continuara usando so
+              as configuracoes locais.
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.card}>
           <SectionTitle
-            title="Preferência geral da conta"
+            title="Preferencia geral da conta"
             description="Esse ajuste remoto define o canal e a prioridade geral dos avisos da conta."
           />
 
           <View style={styles.categoryRow}>
             <View style={styles.info}>
               <Text style={styles.title}>Estado remoto</Text>
+              <Text style={styles.modeSummary}>{remoteHealthLabel}</Text>
               <Text style={styles.desc}>{remoteStateText}</Text>
             </View>
 
@@ -332,7 +355,7 @@ export default function NotificationSettings() {
           <CategorySoundRow
             profile="ALERT"
             title="Alertas"
-            description="Pessoas não autorizadas, pânico e situações de risco."
+            description="Pessoas nao autorizadas, panico e situacoes de risco."
             value={prefs.alerts}
             onChange={(mode) => updateMode('alerts', mode)}
             onTest={() => testCategory('alerts')}
@@ -371,8 +394,8 @@ export default function NotificationSettings() {
           <Divider />
           <CategorySoundRow
             profile="CAMERA"
-            title="Câmeras"
-            description="Eventos relacionados à câmera, evidência ou snapshot."
+            title="Cameras"
+            description="Eventos relacionados a camera, evidencia ou snapshot."
             value={prefs.cameras}
             onChange={(mode) => updateMode('cameras', mode)}
             onTest={() => testCategory('cameras')}
@@ -382,12 +405,12 @@ export default function NotificationSettings() {
 
         <View style={styles.card}>
           <SectionTitle
-            title="Outras preferências locais"
-            description="Configurações auxiliares que ainda não dependem de sincronização com o backend."
+            title="Outras preferencias locais"
+            description="Configuracoes auxiliares que ainda nao dependem de sincronizacao com o backend."
           />
           <ToggleRow
             title="Resumo semanal"
-            description="Ativa um resumo simples com a movimentação recente da unidade."
+            description="Ativa um resumo simples com a movimentacao recente da unidade."
             value={prefs.reports}
             onChange={toggleReports}
           />
@@ -397,13 +420,7 @@ export default function NotificationSettings() {
   );
 }
 
-function SectionTitle({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function SectionTitle({ title, description }: { title: string; description: string }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -467,7 +484,7 @@ function CategorySoundRow({
 function formatModeLabel(value: NotificationCategorySoundMode) {
   if (value === 'CUSTOM') return 'Personalizado';
   if (value === 'SILENT') return 'Silencioso';
-  return 'Padrão';
+  return 'Padrao';
 }
 
 function formatChannelLabel(value: ResidentNotificationChannel) {
@@ -478,7 +495,7 @@ function formatChannelLabel(value: ResidentNotificationChannel) {
 
 function formatPriorityLabel(value: ResidentNotificationPriority) {
   if (value === 'LOW') return 'Baixa';
-  if (value === 'MEDIUM') return 'Média';
+  if (value === 'MEDIUM') return 'Media';
   return 'Alta';
 }
 
@@ -506,9 +523,7 @@ function ToggleRow({
         <Text style={styles.desc}>{description}</Text>
       </View>
       <View style={[styles.booleanPill, value && styles.booleanPillActive]}>
-        <Text style={[styles.booleanPillText, value && styles.booleanPillTextActive]}>
-          {value ? 'Ativo' : 'Inativo'}
-        </Text>
+        <Text style={[styles.booleanPillText, value && styles.booleanPillTextActive]}>{value ? 'Ativo' : 'Inativo'}</Text>
       </View>
     </TouchableOpacity>
   );

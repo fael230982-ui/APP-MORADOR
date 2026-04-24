@@ -33,6 +33,11 @@ export default function UnitDashboardScreen() {
   const deliveriesEnabled = isResidentFeatureEnabled(residentAppConfig, 'deliveries');
   const messagesEnabled = isResidentFeatureEnabled(residentAppConfig, 'messages');
   const slimMode = residentAppConfig?.slimMode === true;
+  const effectiveUnitId =
+    selectedUnitId ??
+    user?.selectedUnitId ??
+    user?.unitId ??
+    (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +54,7 @@ export default function UnitDashboardScreen() {
   const [deliveries, setDeliveries] = useState(0);
   const [messages, setMessages] = useState(0);
   const [notifications, setNotifications] = useState(0);
-  const [realtimeLabel, setRealtimeLabel] = useState('Atualização periódica');
+  const [realtimeLabel, setRealtimeLabel] = useState('Atualizacao periodica');
 
   const loadDashboard = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
     try {
@@ -63,31 +68,45 @@ export default function UnitDashboardScreen() {
 
       const [overview, residentsResult] = await Promise.all([
         loadResidentOverview({ logLimit: 5, messageLimit: 20, upcomingVisitsLimit: 3 }).catch(() => null),
-        selectedUnitId ? listUnitResidents(selectedUnitId).catch(() => []) : Promise.resolve([]),
+        effectiveUnitId ? listUnitResidents(effectiveUnitId).catch(() => []) : Promise.resolve([]),
       ]);
 
-      setAlerts(overview?.alerts.active ?? 0);
-      setDeliveries(overview?.deliveries.pending ?? 0);
-      setScheduledAccess(overview?.visits.scheduled ?? 0);
-      setUpcomingVisits(overview?.visits.upcoming ?? []);
-      setRecentLogs(overview?.accessLogs.recent ?? []);
-      setCameras(overview?.cameras.total ?? 0);
-      setVehicles(overview?.vehicles.total ?? 0);
-      setResidents(residentsResult.length);
-      setResidentPreview(residentsResult.slice(0, 4).map((item) => ({ id: item.id, name: item.name })));
-      setMessages(overview?.messages.unread ?? 0);
-      setNotifications(overview?.notifications.unread ?? 0);
+      setAlerts((current) => (overview?.alerts.available ? overview.alerts.active : current));
+      setDeliveries((current) => (overview?.deliveries.available ? overview.deliveries.pending : current));
+      setScheduledAccess((current) => (overview?.visits.available ? overview.visits.scheduled : current));
+      setUpcomingVisits((current) => {
+        if (overview?.visits.available && overview.visits.upcoming.length > 0) return overview.visits.upcoming;
+        return overview?.visits.available ? [] : current;
+      });
+      setRecentLogs((current) => {
+        if (overview?.accessLogs.available && overview.accessLogs.recent.length > 0) return overview.accessLogs.recent;
+        return overview?.accessLogs.available ? [] : current;
+      });
+      setCameras((current) => (overview?.cameras.available ? overview.cameras.total : current));
+      setVehicles((current) => (overview?.vehicles.available ? overview.vehicles.total : current));
+      setResidents((current) => {
+        if (!effectiveUnitId) return 0;
+        return residentsResult.length > 0 ? residentsResult.length : current;
+      });
+      setResidentPreview((current) => {
+        if (residentsResult.length > 0) {
+          return residentsResult.slice(0, 4).map((item) => ({ id: item.id, name: item.name }));
+        }
+        return effectiveUnitId ? current : [];
+      });
+      setMessages((current) => (overview?.messages.available ? overview.messages.unread : current));
+      setNotifications((current) => (overview?.notifications.available ? overview.notifications.unread : current));
       setLastUpdatedAt(new Date());
     } catch {
-      setError('Não foi possível atualizar o resumo da unidade agora.');
+      setError('Nao foi possivel atualizar o resumo da unidade agora.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [lastUpdatedAt, selectedUnitId]);
+  }, [effectiveUnitId, lastUpdatedAt]);
 
   useAutoRefresh(() => loadDashboard(lastUpdatedAt ? 'silent' : 'initial'), {
-    enabled: !!selectedUnitId,
+    enabled: !!effectiveUnitId,
     intervalMs: 45000,
     topics: ['overview', 'messages', 'notifications', 'deliveries', 'alerts', 'visits', 'vehicles', 'cameras', 'unit', 'realtime'],
   });
@@ -95,13 +114,15 @@ export default function UnitDashboardScreen() {
   React.useEffect(() => {
     return residentRealtimeService.subscribe((snapshot) => {
       setRealtimeLabel(
-        snapshot.status === 'prepared' || snapshot.status === 'connected' ? 'Atualização automática' : 'Atualização periódica'
+        snapshot.status === 'prepared' || snapshot.status === 'connected'
+          ? 'Atualizacao automatica'
+          : 'Atualizacao periodica'
       );
     });
   }, []);
 
   const statusText = useMemo(() => {
-    if (alerts > 0) return 'Atenção necessária';
+    if (alerts > 0) return 'Atencao necessaria';
     if (scheduledAccess > 0) return 'Acessos programados';
     return 'Tudo calmo';
   }, [alerts, scheduledAccess]);
@@ -121,7 +142,7 @@ export default function UnitDashboardScreen() {
     }
     if (scheduledAccess > 0) {
       items.push(
-        scheduledAccess === 1 ? '1 acesso previsto nas próximas horas.' : `${scheduledAccess} acessos previstos nas próximas horas.`
+        scheduledAccess === 1 ? '1 acesso previsto nas proximas horas.' : `${scheduledAccess} acessos previstos nas proximas horas.`
       );
     }
 
@@ -148,13 +169,13 @@ export default function UnitDashboardScreen() {
         }}
       />
 
-      {!selectedUnitId ? (
+      {!effectiveUnitId ? (
         <View style={styles.emptyState}>
           <Ionicons name="business-outline" size={28} color={colors.primary} />
           <Text style={styles.emptyTitle}>Escolha uma unidade</Text>
           <Text style={styles.emptyDescription}>O resumo aparece quando uma unidade estiver ativa no app.</Text>
           <TouchableOpacity style={styles.emptyAction} activeOpacity={0.86} onPress={() => router.replace('/')}>
-            <Text style={styles.emptyActionText}>Voltar para o início</Text>
+            <Text style={styles.emptyActionText}>Voltar para o inicio</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -168,7 +189,7 @@ export default function UnitDashboardScreen() {
             <Text style={styles.status}>{statusText}</Text>
             <Text style={styles.updated}>
               {lastUpdatedAt
-                ? `Atualizado às ${lastUpdatedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                ? `Atualizado as ${lastUpdatedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
                 : 'Resumo em tempo real'}
             </Text>
             <Text style={styles.updated}>{realtimeLabel}</Text>
@@ -183,7 +204,7 @@ export default function UnitDashboardScreen() {
           ) : null}
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Resumo rápido</Text>
+            <Text style={styles.summaryTitle}>Resumo rapido</Text>
             {highlights.length > 0 ? (
               highlights.map((item) => (
                 <View key={item} style={styles.summaryRow}>
@@ -192,32 +213,53 @@ export default function UnitDashboardScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>Sem pendências no momento.</Text>
+              <Text style={styles.emptyText}>Sem pendencias no momento.</Text>
             )}
           </View>
 
           <View style={styles.grid}>
-            <Metric title="Alertas ativos" value={alerts} icon="notifications-outline" danger={alerts > 0} route="/alerts" />
+            <Metric title="Pessoas" value={residents} icon="people-outline" route="/people" />
             {residentAccessAllowed ? (
               <Metric title="Acessos previstos" value={scheduledAccess} icon="calendar-outline" route="/people/visits" />
             ) : null}
-            {camerasEnabled ? <Metric title="Câmeras" value={cameras} icon="videocam-outline" route="/cameras" /> : null}
-            {vehiclesEnabled ? <Metric title="Veículos" value={vehicles} icon="car-outline" route="/people/vehicles" /> : null}
-            <Metric title="Moradores" value={residents} icon="people-outline" route="/profile" />
+            {vehiclesEnabled ? <Metric title="Veiculos" value={vehicles} icon="car-outline" route="/people/vehicles" /> : null}
             {deliveriesEnabled ? <Metric title="Encomendas" value={deliveries} icon="cube-outline" route="/deliveries" /> : null}
+            {camerasEnabled ? <Metric title="Cameras da unidade" value={cameras} icon="videocam-outline" route="/cameras" /> : null}
+            <Metric title="Alertas" value={alerts} icon="notifications-outline" danger={alerts > 0} route="/alerts" />
             <Metric title="Avisos" value={messages + notifications} icon="mail-unread-outline" route="/profile/resident-notifications" />
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Atalhos da unidade</Text>
+              <TouchableOpacity onPress={() => router.push('/profile/diagnostics')}>
+                <Text style={styles.sectionLink}>Diagnosticos</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.actionsGrid}>
+              <HubAction title="Pessoas" icon="people-outline" route="/people" />
+              {vehiclesEnabled ? <HubAction title="Veiculos" icon="car-outline" route="/people/vehicles" /> : null}
+              {residentAccessAllowed ? <HubAction title="Visitantes" icon="person-add-outline" route="/people/access-form" /> : null}
+              {deliveriesEnabled ? <HubAction title="Encomendas" icon="cube-outline" route="/deliveries" /> : null}
+              {camerasEnabled ? <HubAction title="Cameras da unidade" icon="videocam-outline" route="/cameras" /> : null}
+            </View>
           </View>
 
           {residentAccessAllowed ? (
             <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.primaryAction} activeOpacity={0.86} onPress={() => router.push('/people/access-form?type=VISITOR')}>
+              <TouchableOpacity style={styles.primaryAction} activeOpacity={0.86} onPress={() => router.push('/people/access-form')}>
                 <Ionicons name="person-add-outline" size={20} color={colors.white} />
                 <Text style={styles.primaryActionText}>Autorizar visita</Text>
               </TouchableOpacity>
-              {vehiclesEnabled ? (
+              {deliveriesEnabled ? (
+                <TouchableOpacity style={styles.secondaryAction} activeOpacity={0.86} onPress={() => router.push('/deliveries')}>
+                  <Ionicons name="cube-outline" size={18} color={colors.primary} />
+                  <Text style={styles.secondaryActionText}>Encomendas</Text>
+                </TouchableOpacity>
+              ) : vehiclesEnabled ? (
                 <TouchableOpacity style={styles.secondaryAction} activeOpacity={0.86} onPress={() => router.push('/people/vehicles')}>
                   <Ionicons name="car-outline" size={18} color={colors.primary} />
-                  <Text style={styles.secondaryActionText}>Veículos</Text>
+                  <Text style={styles.secondaryActionText}>Veiculos</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -246,7 +288,7 @@ export default function UnitDashboardScreen() {
           {residentAccessAllowed ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Próximos acessos</Text>
+                <Text style={styles.sectionTitle}>Proximos acessos</Text>
                 <TouchableOpacity onPress={() => router.push('/people/visits')}>
                   <Text style={styles.sectionLink}>Ver previstos</Text>
                 </TouchableOpacity>
@@ -261,14 +303,14 @@ export default function UnitDashboardScreen() {
                     <View style={styles.accessTextArea}>
                       <Text style={styles.accessName}>{visit.visitorName}</Text>
                       <Text style={styles.accessMeta}>
-                        {visit.categoryLabel || categoryLabel(visit.category)} • {formatTime(visit.expectedEntryAt)}
+                        {visit.categoryLabel || categoryLabel(visit.category)} - {formatTime(visit.expectedEntryAt)}
                       </Text>
                     </View>
                     <Text style={styles.accessStatus}>Agendado</Text>
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={styles.emptyText}>Nenhuma visita, prestador ou locatário previsto.</Text>
+                <Text style={styles.emptyText}>Nenhuma visita, prestador ou locatario previsto.</Text>
               )}
             </View>
           ) : null}
@@ -276,7 +318,7 @@ export default function UnitDashboardScreen() {
           {residentAccessAllowed ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Últimos acessos</Text>
+                <Text style={styles.sectionTitle}>Ultimos acessos</Text>
                 <TouchableOpacity onPress={() => router.push('/people/access-history')}>
                   <Text style={styles.sectionLink}>Ver todos</Text>
                 </TouchableOpacity>
@@ -297,7 +339,7 @@ export default function UnitDashboardScreen() {
                       <Text style={styles.accessMeta}>{formatTime(log.timestamp)}</Text>
                     </View>
                     <Text style={styles.accessStatus}>
-                      {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saída' : 'Entrada'}
+                      {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saida' : 'Entrada'}
                     </Text>
                   </View>
                 ))
@@ -321,7 +363,7 @@ export default function UnitDashboardScreen() {
 
 function categoryLabel(value?: string | null) {
   if (value === 'SERVICE_PROVIDER') return 'Prestador';
-  if (value === 'RENTER') return 'Locatário';
+  if (value === 'RENTER') return 'Locatario';
   if (value === 'RESIDENT') return 'Morador';
   return 'Visitante';
 }
@@ -346,6 +388,25 @@ function Metric({
       </View>
       <Text style={[styles.metricValue, danger && styles.metricValueDanger]}>{value}</Text>
       <Text style={styles.metricTitle}>{title}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function HubAction({
+  title,
+  icon,
+  route,
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
+}) {
+  return (
+    <TouchableOpacity style={styles.hubAction} activeOpacity={0.86} onPress={() => router.push(route as any)}>
+      <View style={styles.hubActionIcon}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
+      </View>
+      <Text style={styles.hubActionTitle}>{title}</Text>
     </TouchableOpacity>
   );
 }
@@ -383,7 +444,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 12,
   },
-  updated: { color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 12, textAlign: 'justify' },
+  updated: { color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 12 },
   notice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -468,6 +529,27 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
   sectionLink: { color: colors.primary, fontSize: 12, fontWeight: '900' },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  hubAction: {
+    width: '47.5%',
+    minHeight: 86,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    padding: 12,
+    justifyContent: 'center',
+    gap: 10,
+  },
+  hubActionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubActionTitle: { color: colors.text, fontSize: 13, fontWeight: '900' },
   accessRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,5 +570,5 @@ const styles = StyleSheet.create({
   accessName: { color: colors.text, fontSize: 14, fontWeight: '900' },
   accessMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   accessStatus: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
-  emptyText: { color: colors.textMuted, fontSize: 13, lineHeight: 18, textAlign: 'justify' },
+  emptyText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 });

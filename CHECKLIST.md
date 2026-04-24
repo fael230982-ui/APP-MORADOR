@@ -1,6 +1,6 @@
 # Checklist Do Modulo
 
-Data de atualizacao: `2026-04-17`
+Data de atualizacao: `2026-04-20`
 
 ## Governanca
 
@@ -21,6 +21,8 @@ Data de atualizacao: `2026-04-17`
 - templates adicionados em `.github/`
 - validacao minima executada:
   - `npm run lint`
+- especificacao `API Sapinho V5.5.txt` copiada para a pasta local `api/`
+- contrato de mensagens revisado para absorver `origin=WHATSAPP` sem expor QR no modulo de morador
 
 ## Observacoes
 

@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import type { PanicEvent, PanicType } from '../types/panic';
 
 function formatDistance(distance: number | null) {
-  if (distance === null) return 'Raio indisponível';
+  if (distance === null) return 'Raio indisponivel';
   if (distance < 1000) return `${distance} m`;
   return `${(distance / 1000).toFixed(1)} km`;
 }
@@ -65,12 +65,14 @@ export default function ResidentActionsScreen() {
 
       setStatusText(
         status.centerConfigured
-          ? `Distância atual até o condomínio: ${formatDistance(status.assistedEntry.distanceMeters)}. A validação de raio foi carregada pela ${status.source === 'api' ? 'API oficial' : 'configuração local'}.`
-          : 'A validação local do raio ainda não foi publicada para esta unidade. Se necessário, o backend pode confirmar sua localização no envio.'
+          ? `Distancia atual ate o condominio: ${formatDistance(status.assistedEntry.distanceMeters)}. A validacao de raio foi carregada pela ${
+              status.source === 'api' ? 'API oficial' : 'configuracao local'
+            }.`
+          : 'A validacao local do raio ainda nao foi publicada para esta unidade. Se necessario, o backend pode confirmar sua localizacao no envio.'
       );
     } catch (err: any) {
       setLocationReady(false);
-      setStatusText(err?.message || 'Não foi possível capturar sua localização agora.');
+      setStatusText(err?.message || 'Nao foi possivel capturar sua localizacao agora.');
     } finally {
       setLoading(false);
     }
@@ -101,15 +103,15 @@ export default function ResidentActionsScreen() {
             hapticFeedback.success();
             setHistory((current) => [result, ...current].slice(0, 5));
             Alert.alert(
-              type === 'PANIC' ? 'Emergência enviada' : 'Entrada assistida enviada',
+              type === 'PANIC' ? 'Emergencia enviada' : 'Entrada assistida enviada',
               type === 'PANIC'
-                ? 'A portaria e a central receberam seu pedido de emergência.'
+                ? 'A portaria e a central receberam seu pedido de emergencia.'
                 : 'A portaria foi avisada para agilizar sua chegada.'
             );
             await loadStatus();
           } catch (err: any) {
             hapticFeedback.error();
-            Alert.alert('Não foi possível enviar', err?.message || 'Tente novamente em instantes.');
+            Alert.alert('Nao foi possivel enviar', err?.message || 'Tente novamente em instantes.');
           } finally {
             setExecutingType(null);
           }
@@ -123,7 +125,7 @@ export default function ResidentActionsScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Ações rápidas',
+          headerTitle: 'Acoes rapidas',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerLeft: () => (
@@ -138,7 +140,7 @@ export default function ResidentActionsScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroKicker}>Unidade monitorada</Text>
           <Text style={styles.heroTitle}>{unitLabel}</Text>
-          <Text style={styles.heroText}>{statusText || 'Preparando localização e regras oficiais da unidade.'}</Text>
+          <Text style={styles.heroText}>{statusText || 'Preparando localizacao e regras oficiais da unidade.'}</Text>
         </View>
 
         <View style={styles.card}>
@@ -147,18 +149,18 @@ export default function ResidentActionsScreen() {
               <Ionicons name="warning-outline" size={24} color={colors.danger} />
             </View>
             <View style={styles.cardTextArea}>
-              <Text style={styles.cardTitle}>Botão de pânico</Text>
+              <Text style={styles.cardTitle}>Botao de panico</Text>
               <Text style={styles.cardDescription}>
-                Use apenas em uma situação real de emergência. O app envia sua localização atual para abrir um incidente ao vivo.
+                Use apenas em uma situacao real de emergencia. O app envia sua localizacao atual para abrir um incidente ao vivo.
               </Text>
             </View>
           </View>
           <InfoLine label="Raio protegido" value={`${panicRadius} m`} />
-          <InfoLine label="Distância atual" value={formatDistance(panicDistance)} />
+          <InfoLine label="Distancia atual" value={formatDistance(panicDistance)} />
           {panicActionReason ? <Text style={styles.blockHint}>{panicActionReason}</Text> : null}
           {!panicActionReason && !panicEnabled ? (
             <Text style={styles.blockHint}>
-              O botão só fica disponível quando você estiver dentro do raio protegido do condomínio.
+              O botao so fica disponivel quando voce estiver dentro do raio protegido do condominio.
             </Text>
           ) : null}
           <TouchableOpacity
@@ -167,14 +169,12 @@ export default function ResidentActionsScreen() {
             onPress={() =>
               handleExecute(
                 'PANIC',
-                'Enviar emergência',
-                'A portaria e a central receberão sua localização atual. Confirme apenas se for uma emergência real.'
+                'Enviar emergencia',
+                'A portaria e a central receberao sua localizacao atual. Confirme apenas se for uma emergencia real.'
               )
             }
           >
-            <Text style={styles.primaryButtonText}>
-              {executingType === 'PANIC' ? 'Enviando...' : 'Disparar emergência'}
-            </Text>
+            <Text style={styles.primaryButtonText}>{executingType === 'PANIC' ? 'Enviando...' : 'Disparar emergencia'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -186,17 +186,16 @@ export default function ResidentActionsScreen() {
             <View style={styles.cardTextArea}>
               <Text style={styles.cardTitle}>Entrada assistida</Text>
               <Text style={styles.cardDescription}>
-                Avise que está chegando para a portaria se preparar. O envio só acontece quando você estiver dentro do raio oficial da unidade.
+                Avise que esta chegando para a portaria se preparar. O envio so acontece quando voce estiver dentro do raio oficial da
+                unidade.
               </Text>
             </View>
           </View>
           <InfoLine label="Raio de envio" value={`${assistedRadius} m`} />
-          <InfoLine label="Distância atual" value={formatDistance(assistedDistance)} />
+          <InfoLine label="Distancia atual" value={formatDistance(assistedDistance)} />
           {assistedActionReason ? <Text style={styles.blockHint}>{assistedActionReason}</Text> : null}
           {!assistedActionReason && !assistedEnabled ? (
-            <Text style={styles.blockHint}>
-              O aviso só será enviado quando você estiver dentro do raio oficial de chegada.
-            </Text>
+            <Text style={styles.blockHint}>O aviso so sera enviado quando voce estiver dentro do raio oficial de chegada.</Text>
           ) : null}
           <TouchableOpacity
             style={[styles.primaryButton, (!assistedEnabled || executingType !== null) && styles.buttonDisabled]}
@@ -205,22 +204,20 @@ export default function ResidentActionsScreen() {
               handleExecute(
                 'ASSISTED_ENTRY',
                 'Avisar chegada',
-                'A portaria será avisada de que você está chegando para agilizar sua entrada.'
+                'A portaria sera avisada de que voce esta chegando para agilizar sua entrada.'
               )
             }
           >
-            <Text style={styles.primaryButtonText}>
-              {executingType === 'ASSISTED_ENTRY' ? 'Enviando...' : 'Avisar chegada'}
-            </Text>
+            <Text style={styles.primaryButtonText}>{executingType === 'ASSISTED_ENTRY' ? 'Enviando...' : 'Avisar chegada'}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.historyCard}>
-          <Text style={styles.historyTitle}>Últimos acionamentos</Text>
+          <Text style={styles.historyTitle}>Ultimos acionamentos</Text>
           {loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.loadingText}>Atualizando histórico...</Text>
+              <Text style={styles.loadingText}>Atualizando historico...</Text>
             </View>
           ) : history.length > 0 ? (
             history.map((item) => (
