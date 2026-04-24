@@ -19,12 +19,16 @@
 - tela de `Pessoas` simplificada com CTA principal de `Autorizar acesso`
 - tela de notificacoes reescrita em texto limpo e com fallback local quando a preferencia remota falha
 - mensagens agora mostram estado mais claro para conversas do morador com a portaria
+- telas de `Inicio`, `Perfil` e `Cameras` regravadas em texto seguro para eliminar codificacao quebrada
+- `README.md` reorganizado para refletir o escopo atual do app e o momento de publicacao
+- permissoes e descricoes de camera/fotos refinadas em `app.config.ts`
 
 ### Docs
 
 - relatorio unico de validacao real do `App Morador` contra o backend em `docs/RELATORIO_UNICO_VALIDACAO_APP_MORADOR_BACKEND_2026-04-24.md`
 - backlog consolidado de correcoes em `docs/BACKLOG_CORRECOES_APP_MORADOR_2026-04-24.md`
 - relatorio pos-`V5.7` com testes reais e pendencias remanescentes em `docs/RELATORIO_POS_API_V5_7_2026-04-24.md`
+- checklist de pre-publicacao em `docs/PRE_PUBLICACAO_APP_MORADOR.md`
 
 ### Backend
 

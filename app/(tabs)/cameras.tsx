@@ -27,22 +27,22 @@ function cameraStatusLabel(value?: string | null) {
 
 function cameraPreferredMediaLabel(camera: Camera) {
   if (camera.preferredMedia === 'webRtcUrl') {
-    return 'Prioridade de mídia: WebRTC informado pelo backend';
+    return 'Prioridade de midia: WebRTC informado pelo backend';
   }
 
   if (camera.preferredMedia === 'hlsUrl' || camera.preferredMedia === 'liveUrl') {
-    return 'Prioridade de mídia: vídeo ao vivo';
+    return 'Prioridade de midia: video ao vivo';
   }
 
   if (camera.preferredMedia === 'imageStreamUrl' || camera.preferredMedia === 'mjpegUrl') {
-    return 'Prioridade de mídia: imagem em tempo real';
+    return 'Prioridade de midia: imagem em tempo real';
   }
 
   if (camera.preferredMedia === 'snapshotUrl' || camera.preferredMedia === 'thumbnailUrl') {
-    return 'Prioridade de mídia: imagem sob demanda';
+    return 'Prioridade de midia: imagem sob demanda';
   }
 
-  return 'Prioridade de mídia: ainda não definida';
+  return 'Prioridade de midia: ainda nao definida';
 }
 
 export default function CamerasScreen() {
@@ -68,7 +68,7 @@ export default function CamerasScreen() {
   const loadCameras = useCallback(async () => {
     setError(null);
     await execute().catch((err: any) => {
-      setError(err?.response?.data?.message || 'Não foi possível carregar as câmeras agora.');
+      setError(err?.response?.data?.message || 'Nao foi possivel carregar as cameras agora.');
     });
   }, [execute]);
 
@@ -114,12 +114,12 @@ export default function CamerasScreen() {
       setPreviewStatusByCamera((current) => ({
         ...current,
         [camera.id]: liveVideoUrl
-          ? 'Vídeo ao vivo disponível.'
+          ? 'Video ao vivo disponivel.'
           : onlyWebRtcAvailable
-            ? 'Esta câmera informou somente WebRTC. Valide liveUrl, hlsUrl e webRtcUrl no contrato antes de tentar reproduzir no app.'
-          : previewUrl
-            ? 'Vídeo ao vivo indisponível agora. Exibindo uma imagem atual da câmera.'
-            : 'A câmera não entregou vídeo nem imagem agora.',
+            ? 'Esta camera informou somente WebRTC. Valide liveUrl, hlsUrl e webRtcUrl no contrato antes de tentar reproduzir no app.'
+            : previewUrl
+              ? 'Video ao vivo indisponivel agora. Exibindo uma imagem atual da camera.'
+              : 'A camera nao entregou video nem imagem agora.',
       }));
       setLiveUrlByCamera((current) => ({ ...current, [camera.id]: liveVideoUrl }));
       setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
@@ -130,7 +130,7 @@ export default function CamerasScreen() {
     } catch {
       setPreviewStatusByCamera((current) => ({
         ...current,
-        [camera.id]: 'Não foi possível consultar o vídeo agora. Exibindo imagem quando disponível.',
+        [camera.id]: 'Nao foi possivel consultar o video agora. Exibindo imagem quando disponivel.',
       }));
       setLiveUrlByCamera((current) => ({ ...current, [camera.id]: '' }));
       setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
@@ -145,7 +145,7 @@ export default function CamerasScreen() {
     }));
     setPreviewStatusByCamera((current) => ({
       ...current,
-      [camera.id]: 'Imagem atualizada para conferência rápida.',
+      [camera.id]: 'Imagem atualizada para conferencia rapida.',
     }));
     setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
   }
@@ -217,7 +217,7 @@ export default function CamerasScreen() {
               </Text>
               {hasWebRtcTransport ? (
                 <Text style={styles.webRtcHintText}>
-                  Se esta câmera vier somente com WebRTC, o app não tenta reproduzir esse link no player atual.
+                  Se esta camera vier somente com WebRTC, o app nao tenta reproduzir esse link no player atual.
                 </Text>
               ) : null}
               <Text style={styles.mediaHintText}>{cameraPreferredMediaLabel(item)}</Text>
@@ -253,11 +253,11 @@ export default function CamerasScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.container}>
-          <SectionHeader title="Câmeras" subtitle="Disponibilidade definida pela configuração oficial da unidade." />
+          <SectionHeader title="Cameras" subtitle="Disponibilidade definida pela configuracao oficial da unidade." />
           <FeatureLockedState
             icon="videocam-outline"
-            title="Câmeras indisponíveis"
-            description="Este condomínio não habilitou a visualização de câmeras para esta experiência do morador."
+            title="Cameras indisponiveis"
+            description="Este condominio nao habilitou a visualizacao de cameras para esta experiencia do morador."
             actionLabel="Voltar para o inicio"
             onAction={() => router.replace('/')}
           />
@@ -270,11 +270,11 @@ export default function CamerasScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.container}>
-          <SectionHeader title="Câmeras" subtitle="Escolha uma unidade para ver as câmeras vinculadas." />
+          <SectionHeader title="Cameras" subtitle="Escolha uma unidade para ver as cameras vinculadas." />
           <EmptyState
             icon="videocam-outline"
             title="Escolha uma unidade"
-            description="Selecione a unidade que deseja acompanhar para abrir as câmeras disponíveis."
+            description="Selecione a unidade que deseja acompanhar para abrir as cameras disponiveis."
           />
           <TouchableOpacity style={styles.selectUnitButton} activeOpacity={0.86} onPress={() => setShowUnitModal(true)}>
             <Text style={styles.selectUnitButtonText}>Selecionar unidade</Text>
@@ -288,7 +288,7 @@ export default function CamerasScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <SectionHeader title="Câmeras" subtitle={selectedUnitName ? `Unidade ativa: ${selectedUnitName}` : 'Monitoramento em tempo real'} />
+        <SectionHeader title="Cameras" subtitle={selectedUnitName ? `Unidade ativa: ${selectedUnitName}` : 'Monitoramento em tempo real'} />
 
         {loading && !cameras ? (
           <View>
@@ -314,8 +314,8 @@ export default function CamerasScreen() {
               <View style={styles.emptyCameraBox}>
                 <EmptyState
                   icon="videocam-outline"
-                  title={error ? 'Câmeras indisponíveis' : 'Nenhuma câmera disponível'}
-                  description={error || 'Quando houver câmera vinculada à sua unidade, ela aparecerá aqui.'}
+                  title={error ? 'Cameras indisponiveis' : 'Nenhuma camera disponivel'}
+                  description={error || 'Quando houver camera vinculada a sua unidade, ela aparecera aqui.'}
                 />
                 <TouchableOpacity style={styles.supportButton} activeOpacity={0.86} onPress={() => router.push('/profile/support')}>
                   <Ionicons name="headset-outline" size={18} color={colors.white} />
@@ -363,9 +363,9 @@ function CameraVisual({
   return (
     <View style={styles.noPreviewBox}>
       <Ionicons name="videocam-outline" size={30} color={colors.textMuted} />
-      <Text style={styles.noPreviewText}>Imagem ao vivo ainda não disponível</Text>
+      <Text style={styles.noPreviewText}>Imagem ao vivo ainda nao disponivel</Text>
       {failedPreviewUrls.length > 0 ? (
-        <Text style={styles.noPreviewHint}>O servidor não entregou uma imagem válida agora. Tente atualizar novamente em instantes.</Text>
+        <Text style={styles.noPreviewHint}>O servidor nao entregou uma imagem valida agora. Tente atualizar novamente em instantes.</Text>
       ) : null}
     </View>
   );
@@ -403,7 +403,7 @@ function FullscreenCameraModal({
                 <View style={styles.fullscreenWebRtcNotice}>
                   <Ionicons name="radio-outline" size={16} color={colors.info} />
                   <Text style={styles.fullscreenWebRtcText}>
-                    O backend informou WebRTC para esta câmera. O player atual do app depende de `liveUrl` ou `hlsUrl`.
+                    O backend informou WebRTC para esta camera. O player atual do app depende de `liveUrl` ou `hlsUrl`.
                   </Text>
                 </View>
               ) : null}

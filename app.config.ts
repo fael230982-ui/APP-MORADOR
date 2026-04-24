@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug,
     version: config.version ?? '1.0.0',
     orientation: 'portrait',
-    userInterfaceStyle: 'dark',
+    userInterfaceStyle: 'light',
     scheme,
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -32,8 +32,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier,
       infoPlist: {
         ...config.ios?.infoPlist,
-        NSCameraUsageDescription: 'Precisamos acessar sua camera para tirar fotos dos cadastros.',
-        NSPhotoLibraryUsageDescription: 'Precisamos acessar suas fotos para selecionar imagens dos cadastros.',
+        NSCameraUsageDescription: 'Precisamos acessar sua camera para tirar fotos do perfil e de cadastros da unidade.',
+        NSPhotoLibraryUsageDescription: 'Precisamos acessar suas fotos para selecionar imagens do perfil e de cadastros da unidade.',
         NSLocationWhenInUseUsageDescription:
           'Precisamos da sua localizacao para validar o raio do condominio em acoes de emergencia e chegada assistida.',
       },
@@ -54,8 +54,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-image-picker',
         {
-          photosPermission: 'Precisamos acessar suas fotos para selecionar imagens dos cadastros.',
-          cameraPermission: 'Precisamos acessar sua camera para tirar fotos dos cadastros.',
+          photosPermission: 'Precisamos acessar suas fotos para selecionar imagens do perfil e de cadastros da unidade.',
+          cameraPermission: 'Precisamos acessar sua camera para tirar fotos do perfil e de cadastros da unidade.',
         },
       ],
       [
