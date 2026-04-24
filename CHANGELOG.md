@@ -29,12 +29,16 @@
 - backlog consolidado de correcoes em `docs/BACKLOG_CORRECOES_APP_MORADOR_2026-04-24.md`
 - relatorio pos-`V5.7` com testes reais e pendencias remanescentes em `docs/RELATORIO_POS_API_V5_7_2026-04-24.md`
 - checklist de pre-publicacao em `docs/PRE_PUBLICACAO_APP_MORADOR.md`
+- copia local da `API V5.9` em `api/API Sapinho V5.9.txt`
+- relatorio pos-`V5.9` com leitura de contrato e testes reais em `docs/RELATORIO_POS_API_V5_9_2026-04-24.md`
 
 ### Backend
 
 - `resident/profile` voltou a publicar `phone`, `photoUrl`, `photoUri`, `faceStatus` e `faceUpdatedAt`
 - `resident/notification-preferences` voltou a responder `200`
 - permanecem quebradas as imagens de encomenda publicadas em `photoUrl` e `snapshotUrl`, hoje em `404`
+- `V5.9` manteve o contrato do `App Morador` sem novas rotas obrigatorias e estabilizou `auth/me` e `auth/stream-capabilities` na validacao repetida
+- cameras seguem pendentes no escopo do morador, ainda com lista vazia em `GET /api/v1/cameras`
 
 ### Security
 
