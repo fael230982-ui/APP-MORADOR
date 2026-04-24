@@ -28,14 +28,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     assetBundlePatterns: ['**/*'],
     ios: {
       ...config.ios,
-      supportsTabletMode: true,
+      supportsTablet: true,
       bundleIdentifier,
       infoPlist: {
         ...config.ios?.infoPlist,
-        NSCameraUsageDescription: 'Precisamos acessar sua camera para tirar fotos do perfil e de cadastros da unidade.',
+        NSCameraUsageDescription: 'Precisamos acessar sua câmera para tirar fotos do perfil e de cadastros da unidade.',
         NSPhotoLibraryUsageDescription: 'Precisamos acessar suas fotos para selecionar imagens do perfil e de cadastros da unidade.',
         NSLocationWhenInUseUsageDescription:
-          'Precisamos da sua localizacao para validar o raio do condominio em acoes de emergencia e chegada assistida.',
+          'Precisamos da sua localização para validar o raio do condomínio em ações de emergência e chegada assistida.',
       },
     },
     android: {
@@ -55,7 +55,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-image-picker',
         {
           photosPermission: 'Precisamos acessar suas fotos para selecionar imagens do perfil e de cadastros da unidade.',
-          cameraPermission: 'Precisamos acessar sua camera para tirar fotos do perfil e de cadastros da unidade.',
+          cameraPermission: 'Precisamos acessar sua câmera para tirar fotos do perfil e de cadastros da unidade.',
         },
       ],
       [

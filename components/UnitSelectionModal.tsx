@@ -11,7 +11,7 @@ type Props = {
 };
 
 export default function UnitSelectionModal({ visible, onClose, locked = false }: Props) {
-  const { user, selectedUnitId, selectUnit, logout } = useAuthStore();
+  const { user, selectedUnitId, preferredUnitId, selectUnit, setPreferredUnit, logout } = useAuthStore();
   const unitIds = user?.unitIds ?? [];
   const unitNames = user?.unitNames ?? [];
 
@@ -56,19 +56,34 @@ export default function UnitSelectionModal({ visible, onClose, locked = false }:
           ) : (
             units.map((unit) => {
               const active = unit.id === selectedUnitId;
+              const preferred = unit.id === preferredUnitId;
               return (
-                <TouchableOpacity
-                  key={unit.id}
-                  style={[styles.unitButton, active && styles.unitButtonActive]}
-                  activeOpacity={0.85}
-                  onPress={() => handleSelect(unit.id, unit.name)}
-                >
-                  <View>
-                    <Text style={styles.unitName}>{unit.name}</Text>
-                    <Text style={styles.unitId}>{active ? 'Unidade em uso' : 'Toque para usar esta unidade'}</Text>
-                  </View>
-                  {active && <Ionicons name="checkmark-circle" size={24} color={colors.success} />}
-                </TouchableOpacity>
+                <View key={unit.id} style={[styles.unitButton, active && styles.unitButtonActive]}>
+                  <TouchableOpacity style={styles.unitMainArea} activeOpacity={0.85} onPress={() => handleSelect(unit.id, unit.name)}>
+                    <View>
+                      <Text style={styles.unitName}>{unit.name}</Text>
+                      <Text style={styles.unitId}>
+                        {active ? 'Unidade em uso' : 'Toque para usar esta unidade'}
+                      </Text>
+                    </View>
+                    {active && <Ionicons name="checkmark-circle" size={24} color={colors.success} />}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.preferredButton, preferred && styles.preferredButtonActive]}
+                    activeOpacity={0.85}
+                    onPress={() => setPreferredUnit(preferred ? null : unit.id)}
+                  >
+                    <Ionicons
+                      name={preferred ? 'star' : 'star-outline'}
+                      size={16}
+                      color={preferred ? colors.white : colors.primary}
+                    />
+                    <Text style={[styles.preferredText, preferred && styles.preferredTextActive]}>
+                      {preferred ? 'Unidade padrão' : 'Definir como padrão'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               );
             })
           )}
@@ -148,16 +163,19 @@ const styles = StyleSheet.create({
   unitButton: {
     backgroundColor: colors.cardSoft,
     borderRadius: 8,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 10,
   },
   unitButtonActive: {
     borderColor: colors.success,
+  },
+  unitMainArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   unitName: {
     color: colors.text,
@@ -168,5 +186,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 4,
+  },
+  preferredButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  preferredButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  preferredText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  preferredTextActive: {
+    color: colors.white,
   },
 });

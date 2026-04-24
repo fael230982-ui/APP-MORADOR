@@ -16,15 +16,13 @@ import DeveloperSignature from '../components/DeveloperSignature';
 import { BRAND } from '../constants/brand';
 import { colors } from '../constants/colors';
 import { useAuth } from '../hooks/useAuth';
+import { humanizeApiError } from '../utils/humanizeApiError';
 
 function getLoginErrorMessage(err: any) {
-  return (
-    err?.message ||
-    err?.response?.data?.message ||
-    (err?.request
-      ? 'Nao foi possivel conectar. Confira sua internet e tente novamente.'
-      : 'Usuario ou senha invalidos.')
-  );
+  return humanizeApiError(err, {
+    fallback: 'Não foi possível concluir o login agora.',
+    invalidCredentials: 'Usuário ou senha inválidos.',
+  });
 }
 
 export default function LoginScreen() {
@@ -45,7 +43,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      return Alert.alert('Atencao', 'Preencha todos os campos.');
+      return Alert.alert('Atenção', 'Preencha todos os campos.');
     }
 
     try {
@@ -62,14 +60,14 @@ export default function LoginScreen() {
         <View style={styles.brandCard}>
           <Image source={BRAND.logo} style={styles.logo} resizeMode="contain" />
           <Text style={styles.title}>{BRAND.residentAccessTitle}</Text>
-          <Text style={styles.subtitle}>Encomendas, alertas e cameras da sua unidade em tempo real.</Text>
+          <Text style={styles.subtitle}>Encomendas, alertas e câmeras da sua unidade em tempo real.</Text>
         </View>
 
         <View style={styles.form}>
           <Text style={styles.label}>Login</Text>
           <TextInput
             style={styles.input}
-            placeholder="E-mail ou usuario"
+            placeholder="E-mail ou usuário"
             placeholderTextColor={colors.textSubtle}
             value={email}
             onChangeText={setEmail}

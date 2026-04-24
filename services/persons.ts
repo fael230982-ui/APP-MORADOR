@@ -1,4 +1,5 @@
 import api, { resolveApiUrl } from './api';
+import { useAuthStore } from '../store/useAuthStore';
 import type { MinorFacialAuthorization, Person, PersonAccessSummary } from '../types/person';
 
 function extractItems(data: any): any[] {
@@ -64,6 +65,29 @@ const mockPersons: Person[] = [
   },
 ];
 
+function getEffectiveSelectedUnitId() {
+  const { selectedUnitId, user } = useAuthStore.getState();
+  return (
+    selectedUnitId ??
+    user?.selectedUnitId ??
+    user?.unitId ??
+    (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null)
+  );
+}
+
+function keepSelectedUnitPersons(persons: Person[], selectedUnitId?: string | null) {
+  if (!selectedUnitId) return persons;
+
+  const personsWithUnit = persons.filter((person) => person.unitId || (Array.isArray(person.unitIds) && person.unitIds.length > 0));
+  if (personsWithUnit.length === 0) return persons;
+
+  return personsWithUnit.filter((person) => {
+    if (person.unitId && person.unitId === selectedUnitId) return true;
+    if (Array.isArray(person.unitIds) && person.unitIds.includes(selectedUnitId)) return true;
+    return false;
+  });
+}
+
 export async function getPersons(category?: string): Promise<Person[]> {
   if (process.env.EXPO_PUBLIC_USE_MOCKS === 'true') {
     return category && category !== 'ALL'
@@ -71,14 +95,20 @@ export async function getPersons(category?: string): Promise<Person[]> {
       : mockPersons;
   }
 
+  const effectiveUnitId = getEffectiveSelectedUnitId();
+
   const response = await api.get('/api/v1/people', {
     params: {
       limit: 100,
       category: category && category !== 'ALL' ? category : undefined,
+      unitId: effectiveUnitId || undefined,
     },
   });
 
-  return extractItems(response.data).map(normalizePerson).filter((person) => person.id);
+  return keepSelectedUnitPersons(
+    extractItems(response.data).map(normalizePerson).filter((person) => person.id),
+    effectiveUnitId
+  );
 }
 
 export async function getPersonById(id: string): Promise<Person | null> {

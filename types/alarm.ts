@@ -4,6 +4,7 @@ export type AlertStatus = 'OPEN' | 'READ';
 
 export type AlarmItem = {
   id: string;
+  unitId?: string | null;
   title: string;
   description?: string;
   type: AlertType | string;

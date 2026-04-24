@@ -75,6 +75,7 @@ export default function AlertsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedImage, setExpandedImage] = useState<{ uri: string; title: string } | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<AlarmItem | null>(null);
   const [updatingAlertId, setUpdatingAlertId] = useState<string | null>(null);
 
   const loadAlerts = useCallback(async () => {
@@ -276,7 +277,7 @@ export default function AlertsScreen() {
             const markingAsRead = updatingAlertId === item.id;
 
             return (
-              <View style={styles.card}>
+              <TouchableOpacity style={styles.card} activeOpacity={0.94} onPress={() => setSelectedAlert(item)}>
                 {item.snapshotUrl ? (
                   <TouchableOpacity
                     activeOpacity={0.92}
@@ -339,7 +340,7 @@ export default function AlertsScreen() {
                     )}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -356,6 +357,74 @@ export default function AlertsScreen() {
               <Image source={{ uri: expandedImage.uri }} style={styles.fullscreenImage} resizeMode="contain" />
             </View>
           ) : null}
+        </View>
+      </Modal>
+      <Modal visible={!!selectedAlert} transparent animationType="slide" onRequestClose={() => setSelectedAlert(null)}>
+        <View style={styles.detailBackdrop}>
+          <View style={styles.detailSheet}>
+            <View style={styles.detailHeader}>
+              <View style={styles.detailTitleArea}>
+                <Text style={styles.detailTitle}>{selectedAlert?.title || 'Detalhe do alerta'}</Text>
+                {selectedAlert ? <StatusBadge label={selectedAlert.statusLabel} type={badgeType(selectedAlert.status)} /> : null}
+              </View>
+              <TouchableOpacity onPress={() => setSelectedAlert(null)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedAlert?.snapshotUrl ? (
+              <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => setExpandedImage({ uri: selectedAlert.snapshotUrl!, title: selectedAlert.title })}
+              >
+                <Image source={{ uri: selectedAlert.snapshotUrl }} style={styles.detailImage} resizeMode="cover" />
+              </TouchableOpacity>
+            ) : null}
+
+            <View style={styles.detailBody}>
+              <Text style={styles.detailMeta}>
+                {selectedAlert?.typeLabel || 'Alerta'} • {selectedAlert?.location || 'Local não informado'}
+              </Text>
+              {selectedAlert?.description ? <Text style={styles.detailDescription}>{selectedAlert.description}</Text> : null}
+              {selectedAlert?.workflowStatus ? (
+                <Text style={styles.detailWorkflow}>{formatWorkflowStatus(selectedAlert.workflowStatus) || selectedAlert.workflowStatus}</Text>
+              ) : null}
+              <Text style={styles.detailDate}>{formatDateTime(selectedAlert?.detectedAt)}</Text>
+            </View>
+
+            <View style={styles.detailActions}>
+              {selectedAlert?.cameraId && camerasEnabled ? (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => {
+                    setSelectedAlert(null);
+                    router.push('/cameras');
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>Abrir câmera</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {selectedAlert && selectedAlert.status !== 'READ' ? (
+                <TouchableOpacity
+                  style={[styles.primaryButton, updatingAlertId === selectedAlert.id && styles.buttonDisabled]}
+                  disabled={updatingAlertId === selectedAlert.id}
+                  onPress={() => handleMarkAsRead(selectedAlert)}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {updatingAlertId === selectedAlert.id ? 'Atualizando...' : 'Marcar como lido'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.resolvedPill}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+                  <Text style={styles.resolvedPillText}>
+                    Lido{selectedAlert?.readAt ? ` em ${formatDateTime(selectedAlert.readAt)}` : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -457,6 +526,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  detailBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  detailSheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 18,
+    gap: 14,
+    maxHeight: '84%',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  detailTitleArea: { flex: 1, gap: 8 },
+  detailTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  detailImage: { width: '100%', height: 220, borderRadius: 12, backgroundColor: colors.cardSoft },
+  detailBody: { gap: 10 },
+  detailMeta: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  detailDescription: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  detailWorkflow: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  detailDate: { color: colors.textSubtle, fontSize: 13 },
+  detailActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   img: { width: '100%', height: 180 },
   expandHint: {
     position: 'absolute',

@@ -39,6 +39,7 @@ function formatDate(value?: string | null) {
 export default function DeliveriesScreen() {
   const selectedUnitId = useAuthStore((state) => state.selectedUnitId);
   const selectedUnitName = useAuthStore((state) => state.selectedUnitName);
+  const user = useAuthStore((state) => state.user);
   const residentAppConfig = useAuthStore((state) => state.residentAppConfig);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [notificationsAvailable, setNotificationsAvailable] = useState(false);
@@ -49,6 +50,12 @@ export default function DeliveriesScreen() {
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('ALL');
   const deliveriesEnabled = isResidentFeatureEnabled(residentAppConfig, 'deliveries');
+  const effectiveUnitId =
+    selectedUnitId ??
+    user?.selectedUnitId ??
+    user?.unitId ??
+    (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null);
+  const effectiveUnitName = selectedUnitName || user?.selectedUnitName || user?.unitName || null;
 
   const pendingDeliveries = useMemo(() => deliveries.filter((item) => isDeliveryPending(item.status)), [deliveries]);
   const filteredDeliveries = useMemo(() => {
@@ -58,7 +65,7 @@ export default function DeliveriesScreen() {
   }, [deliveries, filter]);
 
   const loadDeliveries = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
-    if (!selectedUnitId) {
+    if (!effectiveUnitId) {
       setLoading(false);
       setRefreshing(false);
       return;
@@ -90,10 +97,10 @@ export default function DeliveriesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [deliveries.length, selectedUnitId]);
+  }, [deliveries.length, effectiveUnitId]);
 
   useAutoRefresh(() => loadDeliveries(deliveries.length > 0 ? 'silent' : 'initial'), {
-    enabled: !!selectedUnitId,
+    enabled: !!effectiveUnitId,
     intervalMs: 45000,
     topics: ['deliveries', 'notifications', 'unit', 'realtime'],
   });
@@ -161,7 +168,7 @@ export default function DeliveriesScreen() {
     );
   }
 
-  if (!selectedUnitId) {
+  if (!effectiveUnitId) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.container}>
@@ -180,7 +187,7 @@ export default function DeliveriesScreen() {
       <View style={styles.container}>
         <SectionHeader
           title="Encomendas"
-          subtitle={selectedUnitName ? `Unidade ativa: ${selectedUnitName}` : 'Unidade ativa selecionada'}
+          subtitle={effectiveUnitName ? `Unidade ativa: ${effectiveUnitName}` : 'Unidade ativa selecionada'}
         />
 
         <View style={styles.topRow}>

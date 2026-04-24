@@ -36,7 +36,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 function typeLabel(value: VehicleType) {
-  return VEHICLE_TYPES.find((item) => item.id === value)?.label || 'Veiculo';
+  return VEHICLE_TYPES.find((item) => item.id === value)?.label || 'Veículo';
 }
 
 function statusLabel(value: string) {
@@ -117,12 +117,12 @@ export default function VehiclesScreen() {
       setVehicles(data);
     } catch (err: any) {
       if (err?.response?.status === 403) {
-        setError('Sua conta ainda nao pode consultar veiculos desta unidade.');
+        setError('Sua conta ainda não pode consultar veículos desta unidade.');
         setManageBlocked(true);
       } else if (err?.response?.status === 404) {
-        setError('A consulta de veiculos ainda nao esta disponivel.');
+        setError('A consulta de veículos ainda não está disponível.');
       } else {
-        setError('Nao foi possivel carregar os veiculos agora.');
+        setError('Não foi possível carregar os veículos agora.');
       }
     } finally {
       setLoading(false);
@@ -133,12 +133,12 @@ export default function VehiclesScreen() {
 
   async function handleCreate() {
     if (!selectedUnitId) {
-      Alert.alert('Unidade obrigatoria', 'Selecione uma unidade antes de cadastrar veiculos.');
+      Alert.alert('Unidade obrigatória', 'Selecione uma unidade antes de cadastrar veículos.');
       return;
     }
 
     if (!plateIsValid) {
-      Alert.alert('Placa obrigatoria', 'Informe a placa completa do veiculo.');
+      Alert.alert('Placa obrigatória', 'Informe a placa completa do veículo.');
       return;
     }
 
@@ -157,14 +157,14 @@ export default function VehiclesScreen() {
       setVehicles((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       resetForm();
       setShowForm(false);
-      Alert.alert('Veiculo cadastrado', 'O veiculo foi vinculado a sua unidade.');
+      Alert.alert('Veículo cadastrado', 'O veículo foi vinculado à sua unidade.');
     } catch (err: any) {
       if (err?.response?.status === 403) {
         setManageBlocked(true);
-        Alert.alert('Cadastro ainda nao liberado', 'Sua conta ainda nao pode cadastrar veiculos da unidade.');
+        Alert.alert('Cadastro ainda não liberado', 'Sua conta ainda não pode cadastrar veículos da unidade.');
       } else {
-        const message = err?.response?.data?.message || 'Nao foi possivel cadastrar o veiculo agora.';
-        Alert.alert('Cadastro nao concluido', String(message));
+        const message = err?.response?.data?.message || 'Não foi possível cadastrar o veículo agora.';
+        Alert.alert('Cadastro não concluído', String(message));
       }
     } finally {
       setSaving(false);
@@ -176,8 +176,8 @@ export default function VehiclesScreen() {
     const actionLabel = nextStatus === 'bloqueado' ? 'bloquear' : 'reativar';
 
     Alert.alert(
-      nextStatus === 'bloqueado' ? 'Bloquear veiculo' : 'Reativar veiculo',
-      `Deseja ${actionLabel} o veiculo ${vehicle.plate}?`,
+      nextStatus === 'bloqueado' ? 'Bloquear veículo' : 'Reativar veículo',
+      `Deseja ${actionLabel} o veículo ${vehicle.plate}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -202,9 +202,9 @@ export default function VehiclesScreen() {
             } catch (err: any) {
               if (err?.response?.status === 403) {
                 setManageBlocked(true);
-                Alert.alert('Acao ainda nao liberada', 'Sua conta ainda nao pode alterar veiculos da unidade.');
+                Alert.alert('Ação ainda não liberada', 'Sua conta ainda não pode alterar veículos da unidade.');
               } else {
-                Alert.alert('Nao foi possivel atualizar', err?.response?.data?.message || 'Tente novamente em instantes.');
+                Alert.alert('Não foi possível atualizar', err?.response?.data?.message || 'Tente novamente em instantes.');
               }
             } finally {
               setUpdatingVehicleId(null);
@@ -216,7 +216,7 @@ export default function VehiclesScreen() {
   }
 
   function handleDelete(vehicle: Vehicle) {
-    Alert.alert('Remover veiculo', `Deseja remover ${vehicle.plate} da unidade?`, [
+    Alert.alert('Remover veículo', `Deseja remover ${vehicle.plate} da unidade?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Remover',
@@ -229,9 +229,9 @@ export default function VehiclesScreen() {
           } catch (err: any) {
             if (err?.response?.status === 403) {
               setManageBlocked(true);
-              Alert.alert('Acao ainda nao liberada', 'Sua conta ainda nao pode remover veiculos da unidade.');
+              Alert.alert('Ação ainda não liberada', 'Sua conta ainda não pode remover veículos da unidade.');
             } else {
-              Alert.alert('Nao foi possivel remover', err?.response?.data?.message || 'Tente novamente em instantes.');
+              Alert.alert('Não foi possível remover', err?.response?.data?.message || 'Tente novamente em instantes.');
             }
           } finally {
             setUpdatingVehicleId(null);
@@ -301,7 +301,7 @@ export default function VehiclesScreen() {
         <Stack.Screen
           options={{
             headerShown: true,
-            headerTitle: 'Veiculos',
+            headerTitle: 'Veículos',
             headerStyle: { backgroundColor: colors.background },
             headerTintColor: colors.text,
             headerLeft: () => (
@@ -316,7 +316,7 @@ export default function VehiclesScreen() {
           <EmptyState
             icon="car-outline"
             title="Escolha uma unidade"
-            description="Selecione a unidade que deseja gerenciar para ver ou cadastrar veiculos autorizados."
+            description="Selecione a unidade que deseja gerenciar para ver ou cadastrar veículos autorizados."
           />
           <TouchableOpacity style={styles.selectUnitButton} activeOpacity={0.86} onPress={() => setShowUnitModal(true)}>
             <Text style={styles.selectUnitButtonText}>Selecionar unidade</Text>
@@ -332,7 +332,7 @@ export default function VehiclesScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Veiculos',
+          headerTitle: 'Veículos',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerLeft: () => (
@@ -379,7 +379,7 @@ export default function VehiclesScreen() {
               <View style={styles.noticeCard}>
                 <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
                 <Text style={styles.noticeText}>
-                  Sua conta ainda depende de liberacao do backend para cadastrar, editar ou remover veiculos da unidade.
+                  Sua conta ainda depende de liberação do backend para cadastrar, editar ou remover veículos da unidade.
                 </Text>
               </View>
             ) : null}
@@ -412,12 +412,12 @@ export default function VehiclesScreen() {
 
             <TouchableOpacity style={styles.primaryRowAction} activeOpacity={0.86} onPress={() => setShowForm((current) => !current)}>
               <Ionicons name={showForm ? 'remove-circle-outline' : 'add-circle-outline'} size={18} color={colors.white} />
-              <Text style={styles.primaryRowActionText}>{showForm ? 'Fechar cadastro' : 'Cadastrar veiculo'}</Text>
+              <Text style={styles.primaryRowActionText}>{showForm ? 'Fechar cadastro' : 'Cadastrar veículo'}</Text>
             </TouchableOpacity>
 
             {showForm ? (
               <View style={styles.formCard}>
-                <Text style={styles.formTitle}>Novo veiculo</Text>
+                <Text style={styles.formTitle}>Novo veículo</Text>
 
                 <Text style={styles.inputLabel}>Placa</Text>
                 <TextInput
@@ -429,7 +429,7 @@ export default function VehiclesScreen() {
                   autoCapitalize="characters"
                   maxLength={7}
                 />
-                {shouldShowPlateError ? <Text style={styles.errorText}>Digite uma placa valida, como ABC1234 ou ABC1D23.</Text> : null}
+                {shouldShowPlateError ? <Text style={styles.errorText}>Digite uma placa válida, como ABC1234 ou ABC1D23.</Text> : null}
 
                 <Text style={styles.inputLabel}>Tipo</Text>
                 <View style={styles.typeGrid}>
@@ -484,7 +484,7 @@ export default function VehiclesScreen() {
                   style={styles.input}
                 />
 
-                <Text style={styles.inputLabel}>Observacoes</Text>
+                <Text style={styles.inputLabel}>Observações</Text>
                 <TextInput
                   value={notes}
                   onChangeText={setNotes}
@@ -494,7 +494,7 @@ export default function VehiclesScreen() {
                   multiline
                 />
 
-                <PrimaryButton title="Salvar veiculo" loading={saving} disabled={!canCreate} onPress={handleCreate} />
+                <PrimaryButton title="Salvar veículo" loading={saving} disabled={!canCreate} onPress={handleCreate} />
               </View>
             ) : null}
           </View>
@@ -503,13 +503,17 @@ export default function VehiclesScreen() {
           loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.loadingText}>Carregando veiculos...</Text>
+              <Text style={styles.loadingText}>Carregando veículos...</Text>
             </View>
           ) : (
             <EmptyState
               icon="car-outline"
-              title="Nenhum veiculo nesta lista"
-              description="Os veiculos autorizados para esta unidade vao aparecer aqui."
+              title={statusFilter === 'bloqueado' ? 'Nenhum veículo bloqueado' : 'Nenhum veículo nesta lista'}
+              description={
+                statusFilter === 'bloqueado'
+                  ? 'Não há veículos bloqueados para esta unidade no momento.'
+                  : 'Os veículos autorizados para esta unidade vão aparecer aqui.'
+              }
             />
           )
         }

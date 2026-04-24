@@ -85,11 +85,23 @@ function keepSelectedUnitDeliveries(deliveries: Delivery[], selectedUnitId?: str
 
 export const deliveriesService = {
   async listResidentDeliveries(): Promise<DeliveryListResult> {
-    const selectedUnitId = useAuthStore.getState().selectedUnitId;
+    const { selectedUnitId, user } = useAuthStore.getState();
+    const effectiveUnitId =
+      selectedUnitId ??
+      user?.selectedUnitId ??
+      user?.unitId ??
+      (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null);
+
     const attempts = [
       {
+        source: 'resident-deliveries',
+        params: { page: 1, limit: 100 },
+        skipSelectedUnit: false,
+        residentEndpoint: true,
+      },
+      {
         source: 'recipientUnitId',
-        params: { page: 1, limit: 100, recipientUnitId: selectedUnitId || undefined },
+        params: { page: 1, limit: 100, recipientUnitId: effectiveUnitId || undefined },
         skipSelectedUnit: false,
       },
       {
@@ -103,19 +115,13 @@ export const deliveriesService = {
         skipSelectedUnit: true,
       },
       {
-        source: 'resident-deliveries',
-        params: { page: 1, limit: 100 },
-        skipSelectedUnit: false,
-        residentEndpoint: true,
-      },
-      {
         source: 'unitId',
-        params: { page: 1, limit: 100, unitId: selectedUnitId || undefined },
+        params: { page: 1, limit: 100, unitId: effectiveUnitId || undefined },
         skipSelectedUnit: false,
       },
       {
         source: 'recipientUnitId-no-selected-header',
-        params: { page: 1, limit: 100, recipientUnitId: selectedUnitId || undefined },
+        params: { page: 1, limit: 100, recipientUnitId: effectiveUnitId || undefined },
         skipSelectedUnit: true,
       },
     ];
@@ -128,7 +134,7 @@ export const deliveriesService = {
     let deniedAttempts = 0;
 
     for (const attempt of attempts) {
-      if (!selectedUnitId && attempt.source !== 'auth-scope') continue;
+      if (!effectiveUnitId && attempt.source !== 'auth-scope' && attempt.source !== 'resident-deliveries') continue;
 
       let response;
       let rawDeliveries: Delivery[] = [];
@@ -141,21 +147,21 @@ export const deliveriesService = {
         rawDeliveries = extractItems(response.data).map(normalizeDelivery).filter((item) => item.id);
         deliveries = keepSelectedUnitDeliveries(
           rawDeliveries,
-          selectedUnitId
+          effectiveUnitId
         );
       } catch (err: any) {
         if (err?.response?.status === 403) deniedAttempts += 1;
         console.log(
           `[deliveries] erro via ${attempt.source}: status=${err?.response?.status || 'sem-status'} message=${
             err?.response?.data?.message || err?.message || 'sem-mensagem'
-          } selectedUnitId=${selectedUnitId || 'none'}`
+          } selectedUnitId=${effectiveUnitId || 'none'}`
         );
         continue;
       }
 
       lastResult = {
         deliveries,
-        notificationsAvailable: response.data?.notificationsAvailable ?? false,
+        notificationsAvailable: response.data?.notificationsAvailable ?? response.data?.meta?.notificationsAvailable ?? false,
         source: attempt.source,
       };
 
@@ -174,10 +180,10 @@ export const deliveriesService = {
     }
 
     if (lastResult.accessDenied) {
-      console.log(`[deliveries] sem itens no escopo do usuario. selectedUnitId=${selectedUnitId || 'none'}`);
+      console.log(`[deliveries] sem itens no escopo do usuario. selectedUnitId=${effectiveUnitId || 'none'}`);
     }
 
-    console.log(`[deliveries] 0 itens. selectedUnitId=${selectedUnitId || 'none'}`);
+    console.log(`[deliveries] 0 itens. selectedUnitId=${effectiveUnitId || 'none'}`);
     return lastResult;
   },
 

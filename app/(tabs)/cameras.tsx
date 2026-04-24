@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { router } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { FlatList, Image, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Modal, Pressable, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CameraSkeleton from '../../components/CameraSkeleton';
 import EmptyState from '../../components/EmptyState';
@@ -27,22 +27,22 @@ function cameraStatusLabel(value?: string | null) {
 
 function cameraPreferredMediaLabel(camera: Camera) {
   if (camera.preferredMedia === 'webRtcUrl') {
-    return 'Prioridade de midia: WebRTC informado pelo backend';
+    return 'Formato informado pelo backend: WebRTC';
   }
 
   if (camera.preferredMedia === 'hlsUrl' || camera.preferredMedia === 'liveUrl') {
-    return 'Prioridade de midia: video ao vivo';
+    return 'Formato informado pelo backend: video ao vivo';
   }
 
   if (camera.preferredMedia === 'imageStreamUrl' || camera.preferredMedia === 'mjpegUrl') {
-    return 'Prioridade de midia: imagem em tempo real';
+    return 'Formato informado pelo backend: imagem em tempo real';
   }
 
   if (camera.preferredMedia === 'snapshotUrl' || camera.preferredMedia === 'thumbnailUrl') {
-    return 'Prioridade de midia: imagem sob demanda';
+    return 'Formato informado pelo backend: imagem sob demanda';
   }
 
-  return 'Prioridade de midia: ainda nao definida';
+  return 'Formato informado pelo backend: ainda nao definido';
 }
 
 export default function CamerasScreen() {
@@ -114,12 +114,12 @@ export default function CamerasScreen() {
       setPreviewStatusByCamera((current) => ({
         ...current,
         [camera.id]: liveVideoUrl
-          ? 'Video ao vivo disponivel.'
+          ? 'Vídeo ao vivo disponível.'
           : onlyWebRtcAvailable
-            ? 'Esta camera informou somente WebRTC. Valide liveUrl, hlsUrl e webRtcUrl no contrato antes de tentar reproduzir no app.'
+            ? 'Esta câmera informou apenas WebRTC. Quando houver um formato compatível com o player do app, o vídeo poderá ser exibido aqui.'
             : previewUrl
-              ? 'Video ao vivo indisponivel agora. Exibindo uma imagem atual da camera.'
-              : 'A camera nao entregou video nem imagem agora.',
+              ? 'Vídeo ao vivo indisponível agora. Exibindo uma imagem atual da câmera.'
+              : 'A câmera não entregou vídeo nem imagem agora.',
       }));
       setLiveUrlByCamera((current) => ({ ...current, [camera.id]: liveVideoUrl }));
       setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
@@ -130,7 +130,7 @@ export default function CamerasScreen() {
     } catch {
       setPreviewStatusByCamera((current) => ({
         ...current,
-        [camera.id]: 'Nao foi possivel consultar o video agora. Exibindo imagem quando disponivel.',
+        [camera.id]: 'Não foi possível consultar o vídeo agora. Exibindo imagem quando disponível.',
       }));
       setLiveUrlByCamera((current) => ({ ...current, [camera.id]: '' }));
       setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
@@ -145,7 +145,7 @@ export default function CamerasScreen() {
     }));
     setPreviewStatusByCamera((current) => ({
       ...current,
-      [camera.id]: 'Imagem atualizada para conferencia rapida.',
+        [camera.id]: 'Imagem atualizada para conferência rápida.',
     }));
     setCheckedAtByCamera((current) => ({ ...current, [camera.id]: new Date() }));
   }
@@ -162,17 +162,13 @@ export default function CamerasScreen() {
 
     return (
       <View style={styles.cameraCard}>
-        <TouchableOpacity
-          style={styles.videoPlaceholder}
-          activeOpacity={0.92}
-          onPress={() => setFullscreenCamera({ camera: item, liveUrl, previewUrl, hasWebRtcTransport })}
-          disabled={!liveUrl && !previewUrl}
-        >
+        <View style={styles.videoPlaceholder}>
           <CameraVisual
             liveUrl={liveUrl}
             previewUrl={previewUrl}
             refreshTick={checkedAtByCamera[item.id]?.getTime() || 0}
             failedPreviewUrls={failedPreviewUrls}
+            interactive={false}
             onPreviewError={() => {
               if (!previewUrl) return;
               setFailedPreviewByCamera((current) => ({
@@ -189,7 +185,13 @@ export default function CamerasScreen() {
               <Text style={styles.fullscreenHintText}>Tela cheia</Text>
             </View>
           ) : null}
-        </TouchableOpacity>
+          {liveUrl || previewUrl ? (
+            <Pressable
+              style={styles.previewPressable}
+              onPress={() => setFullscreenCamera({ camera: item, liveUrl, previewUrl, hasWebRtcTransport })}
+            />
+          ) : null}
+        </View>
 
         <View style={styles.cardInfo}>
           <Text style={styles.cameraName}>{item.name}</Text>
@@ -213,11 +215,11 @@ export default function CamerasScreen() {
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
             <View style={styles.helpTextArea}>
               <Text style={styles.helpText}>
-                Quando a camera liberar video ao vivo, ele aparece aqui. Caso contrario, o app mostra uma imagem atual para conferencia.
+                Quando o video ao vivo estiver disponível, ele aparece aqui. Caso contrário, o app mostra a imagem mais atual da câmera.
               </Text>
               {hasWebRtcTransport ? (
                 <Text style={styles.webRtcHintText}>
-                  Se esta camera vier somente com WebRTC, o app nao tenta reproduzir esse link no player atual.
+                  Se esta câmera vier somente com WebRTC, o app pode precisar de um formato adicional para reproduzir o vídeo aqui.
                 </Text>
               ) : null}
               <Text style={styles.mediaHintText}>{cameraPreferredMediaLabel(item)}</Text>
@@ -337,16 +339,18 @@ function CameraVisual({
   previewUrl,
   refreshTick,
   failedPreviewUrls,
+  interactive = true,
   onPreviewError,
 }: {
   liveUrl: string;
   previewUrl: string;
   refreshTick: number;
   failedPreviewUrls: string[];
+  interactive?: boolean;
   onPreviewError?: () => void;
 }) {
   if (liveUrl) {
-    return <LiveCameraPlayer url={liveUrl} />;
+    return <LiveCameraPlayer url={liveUrl} interactive={interactive} />;
   }
 
   if (previewUrl) {
@@ -394,7 +398,13 @@ function FullscreenCameraModal({
             </View>
 
             <View style={styles.fullscreenVideoArea}>
-              <CameraVisual liveUrl={data.liveUrl} previewUrl={data.previewUrl} refreshTick={Date.now()} failedPreviewUrls={[]} />
+              <CameraVisual
+                liveUrl={data.liveUrl}
+                previewUrl={data.previewUrl}
+                refreshTick={Date.now()}
+                failedPreviewUrls={[]}
+                interactive
+              />
             </View>
 
             <View style={styles.fullscreenBottomBar}>
@@ -403,7 +413,7 @@ function FullscreenCameraModal({
                 <View style={styles.fullscreenWebRtcNotice}>
                   <Ionicons name="radio-outline" size={16} color={colors.info} />
                   <Text style={styles.fullscreenWebRtcText}>
-                    O backend informou WebRTC para esta camera. O player atual do app depende de `liveUrl` ou `hlsUrl`.
+                    O backend informou WebRTC para esta câmera. Para exibir vídeo aqui, o app também precisa de um formato compatível, como live ou HLS.
                   </Text>
                 </View>
               ) : null}
@@ -416,7 +426,7 @@ function FullscreenCameraModal({
   );
 }
 
-function LiveCameraPlayer({ url }: { url: string }) {
+function LiveCameraPlayer({ url, interactive = true }: { url: string; interactive?: boolean }) {
   const player = useVideoPlayer(
     {
       uri: url,
@@ -428,7 +438,11 @@ function LiveCameraPlayer({ url }: { url: string }) {
     }
   );
 
-  return <VideoView style={styles.snapshot} player={player} nativeControls contentFit="cover" />;
+  return (
+    <View style={styles.snapshot} pointerEvents={interactive ? 'auto' : 'none'}>
+      <VideoView style={styles.snapshot} player={player} nativeControls={interactive} contentFit="cover" />
+    </View>
+  );
 }
 
 function isImagePreviewUrl(url?: string | null) {
@@ -521,6 +535,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  previewPressable: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 4,
   },
   snapshot: { width: '100%', height: '100%' },
   fullscreenHint: {

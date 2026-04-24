@@ -48,9 +48,7 @@ export type DeliveryListResult = {
 
 export function getDeliveryStatusLabel(status: DeliveryStatus) {
   if (status === 'WITHDRAWN') return 'Retirada';
-  if (status === 'READY_FOR_WITHDRAWAL') return 'Pronta para retirada';
-  if (status === 'NOTIFIED') return 'Notificada';
-  return 'Recebida';
+  return 'Aguardando retirada';
 }
 
 export function isDeliveryPending(status: DeliveryStatus) {

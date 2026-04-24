@@ -41,7 +41,7 @@ function typeLabel(type: string) {
   if (type === 'DELIVERY_EVENT') return 'Encomenda';
   if (type === 'ACCESS_EVENT') return 'Acesso';
   if (type === 'OPERATION_MESSAGE') return 'Mensagem';
-  if (type === 'CAMERA_EVENT') return 'Camera';
+  if (type === 'CAMERA_EVENT') return 'Câmera';
   if (type === 'SECURITY_ALERT') return 'Alerta';
   return 'Aviso';
 }
@@ -51,7 +51,7 @@ function domainLabel(domain?: string | null) {
   if (domain === 'ACCESS') return 'Acesso';
   if (domain === 'MESSAGE') return 'Mensagem';
   if (domain === 'ALERT') return 'Alerta';
-  if (domain === 'CAMERA') return 'Camera';
+  if (domain === 'CAMERA') return 'Câmera';
   return null;
 }
 
@@ -91,8 +91,8 @@ export default function ResidentNotificationsScreen() {
         const status = err?.response?.status;
         setError(
           status === 403
-            ? 'As notificacoes ainda nao estao disponiveis para sua conta.'
-            : 'Nao foi possivel carregar as notificacoes agora.'
+            ? 'As notificações ainda não estão disponíveis para sua conta.'
+            : 'Não foi possível carregar as notificações agora.'
         );
       } finally {
         setLoading(false);
@@ -184,7 +184,7 @@ export default function ResidentNotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Header title="Notificacoes" showBack />
+      <Header title="Notificações" showBack />
 
       <View style={styles.filters}>
         <TouchableOpacity
@@ -197,7 +197,7 @@ export default function ResidentNotificationsScreen() {
           style={[styles.filterButton, unreadOnly && styles.filterButtonActive]}
           onPress={() => setUnreadOnly(true)}
         >
-          <Text style={[styles.filterText, unreadOnly && styles.filterTextActive]}>Nao lidas</Text>
+          <Text style={[styles.filterText, unreadOnly && styles.filterTextActive]}>Não lidas</Text>
         </TouchableOpacity>
       </View>
 
@@ -232,7 +232,7 @@ export default function ResidentNotificationsScreen() {
       {loading && notifications.length === 0 ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Carregando notificacoes...</Text>
+          <Text style={styles.loadingText}>Carregando notificações...</Text>
         </View>
       ) : (
         <FlatList
@@ -251,9 +251,9 @@ export default function ResidentNotificationsScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="notifications-off-outline"
-              title={error ? 'Nao foi possivel atualizar' : 'Nenhuma notificacao'}
+              title={error ? 'Não foi possível atualizar' : 'Nenhuma notificação'}
               description={
-                error || (unreadOnly ? 'Voce nao tem notificacoes pendentes.' : 'Os avisos da unidade vao aparecer aqui.')
+                error || (unreadOnly ? 'Você não tem notificações pendentes.' : 'Os avisos da unidade vão aparecer aqui.')
               }
             />
           }
@@ -277,8 +277,8 @@ export default function ResidentNotificationsScreen() {
                     <AuthenticatedImage
                       uri={item.snapshotUrl}
                       style={styles.notificationImage}
-                      fallbackTitle="Imagem da encomenda indisponivel"
-                      fallbackSubtitle="A notificacao chegou, mas a foto publicada nao esta acessivel agora."
+                      fallbackTitle="Imagem da encomenda indisponível"
+                      fallbackSubtitle="A notificação chegou, mas a foto publicada não está acessível agora."
                       diagnosticSource={`resident-notifications.image.${item.id}`}
                     />
                   ) : null}
@@ -319,9 +319,15 @@ const styles = StyleSheet.create({
   filterButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontSize: 13, fontWeight: '800' },
   filterTextActive: { color: colors.white },
-  typeFilters: { flexDirection: 'row', gap: 8, paddingHorizontal: 18, paddingBottom: 10 },
+  typeFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+  },
   typeFilterButton: {
-    flex: 1,
+    width: '31%',
     minHeight: 36,
     borderRadius: 8,
     borderWidth: 1,
@@ -329,7 +335,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
+    marginBottom: 8,
   },
   typeFilterButtonActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   typeFilterText: { color: colors.textMuted, fontSize: 11, fontWeight: '800', textAlign: 'center' },

@@ -166,7 +166,7 @@ export default function DeliveryDetailScreen() {
             <DetailRow label="Aviso enviado" value={formatDate(delivery.notificationSentAt)} />
           ) : (
             <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>O envio do aviso ao morador ainda nao foi confirmado.</Text>
+              <Text style={styles.noticeText}>A encomenda ja esta disponivel para consulta no app do morador.</Text>
             </View>
           )}
 

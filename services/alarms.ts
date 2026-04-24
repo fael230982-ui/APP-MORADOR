@@ -1,6 +1,7 @@
 import api, { resolveApiUrl } from './api';
 import { getLocallyResolvedAlertIds } from './localAlertState';
 import type { AlarmItem } from '../types/alarm';
+import { useAuthStore } from '../store/useAuthStore';
 
 type WeeklyStat = {
   day: string;
@@ -64,6 +65,7 @@ function normalizeAlert(raw: any): AlarmItem {
 
   return {
     id: String(raw?.id ?? ''),
+    unitId: raw?.unitId ?? raw?.recipientUnitId ?? raw?.unit?.id ?? null,
     title: String(raw?.title ?? raw?.typeLabel ?? 'Alerta'),
     description: raw?.description ?? raw?.message ?? null,
     type: String(raw?.type ?? 'GENERIC').toUpperCase(),
@@ -91,19 +93,37 @@ function normalizeAlert(raw: any): AlarmItem {
   };
 }
 
+function keepSelectedUnitAlerts(alerts: AlarmItem[], selectedUnitId?: string | null) {
+  if (!selectedUnitId) return alerts;
+
+  const alertsWithUnit = alerts.filter((alert) => alert.unitId);
+  if (alertsWithUnit.length === 0) return alerts;
+
+  return alertsWithUnit.filter((alert) => alert.unitId === selectedUnitId);
+}
+
 async function listAlerts(params?: Record<string, unknown>): Promise<AlarmItem[]> {
   if (process.env.EXPO_PUBLIC_USE_MOCKS === 'true') {
     return [];
   }
 
+  const { selectedUnitId, user } = useAuthStore.getState();
+  const effectiveUnitId =
+    selectedUnitId ??
+    user?.selectedUnitId ??
+    user?.unitId ??
+    (user?.unitIds && user.unitIds.length === 1 ? user.unitIds[0] : null);
+
   const response = await api.get('/api/v1/alerts', {
     params: {
       limit: 100,
+      unitId: effectiveUnitId || undefined,
       ...params,
     },
   });
 
-  return extractItems(response.data)
+  return keepSelectedUnitAlerts(
+    extractItems(response.data)
     .map(normalizeAlert)
     .filter((alert) => alert.id)
     .sort((a, b) => {
@@ -111,7 +131,9 @@ async function listAlerts(params?: Record<string, unknown>): Promise<AlarmItem[]
         return (b.severityRank ?? 0) - (a.severityRank ?? 0);
       }
       return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
-    });
+    }),
+    effectiveUnitId
+  );
 }
 
 export async function getAlarmsByStatus(status: string): Promise<AlarmItem[]> {

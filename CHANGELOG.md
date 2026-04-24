@@ -22,6 +22,8 @@
 - telas de `Inicio`, `Perfil` e `Cameras` regravadas em texto seguro para eliminar codificacao quebrada
 - `README.md` reorganizado para refletir o escopo atual do app e o momento de publicacao
 - permissoes e descricoes de camera/fotos refinadas em `app.config.ts`
+- mensagens de login ficaram mais humanas para indisponibilidade de servidor e falhas de conexao
+- preparacao de loja consolidada em `docs/PRE_PUBLICACAO_APP_MORADOR.md` e `docs/PACOTE_LOJA_APP_MORADOR.md`
 
 ### Docs
 

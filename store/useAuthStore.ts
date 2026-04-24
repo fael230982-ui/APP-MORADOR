@@ -16,11 +16,13 @@ interface AuthStore {
   acceptedTermsAt: string | null;
   selectedUnitId: string | null;
   selectedUnitName: string | null;
+  preferredUnitId: string | null;
   residentAppConfig: ResidentAppConfig | null;
   setAuth: (user: User, token: string) => void;
   updateUser: (updates: Partial<User>) => void;
   setResidentAppConfig: (value: ResidentAppConfig | null) => void;
   selectUnit: (unitId: string, unitName?: string | null) => void;
+  setPreferredUnit: (unitId: string | null) => void;
   clearSelectedUnit: () => void;
   logout: () => void;
   acceptTerms: () => void;
@@ -35,18 +37,20 @@ const TOKEN_KEY = STORAGE_KEYS.authToken;
 const TERMS_KEY = STORAGE_KEYS.authTerms;
 const SELECTED_UNIT_ID_KEY = STORAGE_KEYS.authSelectedUnitId;
 const SELECTED_UNIT_NAME_KEY = STORAGE_KEYS.authSelectedUnitName;
+const PREFERRED_UNIT_ID_KEY = 'auth.preferredUnitId';
 
 function resolveSelectedUnit(
   user: User,
   storedUnitId?: string | null,
+  preferredUnitId?: string | null,
   storedUnitName?: string | null,
   preferStoredUnit = true
 ) {
   const unitIds = user.unitIds ?? [];
   const unitNames = user.unitNames ?? [];
   const candidateId = preferStoredUnit
-    ? storedUnitId ?? user.selectedUnitId ?? user.unitId ?? null
-    : user.selectedUnitId ?? user.unitId ?? storedUnitId ?? null;
+    ? storedUnitId ?? preferredUnitId ?? user.selectedUnitId ?? user.unitId ?? null
+    : user.selectedUnitId ?? preferredUnitId ?? user.unitId ?? storedUnitId ?? null;
 
   if (unitIds.length > 0) {
     const candidateIndex = candidateId ? unitIds.indexOf(candidateId) : -1;
@@ -124,10 +128,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   acceptedTermsAt: null,
   selectedUnitId: null,
   selectedUnitName: null,
+  preferredUnitId: null,
   residentAppConfig: null,
 
   setAuth: (user, token) => {
-    const resolved = resolveSelectedUnit(user);
+    const preferredUnitId = useAuthStore.getState().preferredUnitId;
+    const resolved = resolveSelectedUnit(user, null, preferredUnitId);
     const nextUser = {
       ...user,
       selectedUnitId: resolved.selectedUnitId,
@@ -164,6 +170,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       const resolved = resolveSelectedUnit(
         mergedUser,
         state.selectedUnitId,
+        state.preferredUnitId,
         state.selectedUnitName,
         false
       );
@@ -191,6 +198,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         user: nextUser,
         selectedUnitId: resolved.selectedUnitId,
         selectedUnitName: resolved.selectedUnitName,
+        preferredUnitId: state.preferredUnitId,
       };
     });
 
@@ -250,6 +258,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
     });
   },
 
+  setPreferredUnit: (unitId) => {
+    set({ preferredUnitId: unitId });
+
+    if (unitId) {
+      AsyncStorage.setItem(PREFERRED_UNIT_ID_KEY, unitId);
+    } else {
+      AsyncStorage.removeItem(PREFERRED_UNIT_ID_KEY);
+    }
+  },
+
   clearSelectedUnit: () => {
     set((state) => {
       const nextUser = state.user
@@ -286,6 +304,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       token: null,
       selectedUnitId: null,
       selectedUnitName: null,
+      preferredUnitId: null,
       residentAppConfig: null,
       currentTermsVersion: CURRENT_TERMS_VERSION,
       hasAcceptedTerms: false,
@@ -302,6 +321,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       ...LEGACY_STORAGE_KEYS.authSelectedUnitId,
       SELECTED_UNIT_NAME_KEY,
       ...LEGACY_STORAGE_KEYS.authSelectedUnitName,
+      PREFERRED_UNIT_ID_KEY,
     ]).catch(() => undefined);
     clearSensitiveResidentSessionData().catch(() => undefined);
 
@@ -374,11 +394,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       SELECTED_UNIT_NAME_KEY,
       LEGACY_STORAGE_KEYS.authSelectedUnitName
     );
+    const preferredUnitId = await AsyncStorage.getItem(PREFERRED_UNIT_ID_KEY);
     const parsedUser = user ? JSON.parse(user) : null;
     const parsedTerms = parseTerms(terms);
 
     const resolved = parsedUser
-      ? resolveSelectedUnit(parsedUser, selectedUnitId, selectedUnitName)
+      ? resolveSelectedUnit(parsedUser, selectedUnitId, preferredUnitId, selectedUnitName)
       : null;
     const nextUser = parsedUser && resolved
       ? {
@@ -395,6 +416,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       currentTermsVersion: CURRENT_TERMS_VERSION,
       selectedUnitId: resolved?.selectedUnitId ?? null,
       selectedUnitName: resolved?.selectedUnitName ?? null,
+      preferredUnitId: preferredUnitId ?? null,
       residentAppConfig: null,
       hasAcceptedTerms: parsedTerms.hasAcceptedTerms,
       acceptedTermsVersion: parsedTerms.acceptedTermsVersion,

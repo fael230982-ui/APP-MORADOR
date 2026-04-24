@@ -4,13 +4,13 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import { BRAND } from '../../constants/brand';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { humanizeApiError } from '../../utils/humanizeApiError';
 
 function getLoginErrorMessage(err: any) {
-  return (
-    err?.message ||
-    err?.response?.data?.message ||
-    (err?.request ? 'Nao foi possivel conectar. Confira sua internet e tente novamente.' : 'E-mail ou senha invalidos.')
-  );
+  return humanizeApiError(err, {
+    fallback: 'Não foi possível concluir o login agora.',
+    invalidCredentials: 'E-mail ou senha inválidos.',
+  });
 }
 
 export default function LoginScreen() {

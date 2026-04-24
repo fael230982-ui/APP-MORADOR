@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import EmptyState from '../components/EmptyState';
 import FeatureLockedState from '../components/FeatureLockedState';
 import UnitSelectionModal from '../components/UnitSelectionModal';
@@ -62,6 +62,7 @@ function getOriginBadge(origin?: string | null) {
 }
 
 export default function MessagesScreen() {
+  const insets = useSafeAreaInsets();
   const selectedUnitId = useAuthStore((state) => state.selectedUnitId);
   const selectedUnitName = useAuthStore((state) => state.selectedUnitName);
   const residentAppConfig = useAuthStore((state) => state.residentAppConfig);
@@ -208,7 +209,11 @@ export default function MessagesScreen() {
         }}
       />
 
-      <KeyboardAvoidingView style={styles.keyboardArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.keyboardArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      >
         <View style={styles.unitHeader}>
           <Ionicons name="business-outline" size={18} color={colors.primary} />
           <Text style={styles.unitHeaderText}>{selectedUnitName || 'Unidade ativa'}</Text>
@@ -231,6 +236,7 @@ export default function MessagesScreen() {
             data={sortedMessages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={sortedMessages.length ? styles.list : styles.emptyList}
+            style={styles.messagesList}
             refreshControl={<RefreshControl refreshing={loading} onRefresh={() => loadMessages('refresh')} tintColor={colors.primary} />}
             ListEmptyComponent={
               <EmptyState
@@ -286,7 +292,7 @@ export default function MessagesScreen() {
           />
         )}
 
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
@@ -311,6 +317,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   keyboardArea: { flex: 1 },
+  messagesList: { flex: 1 },
   backButton: { marginLeft: 10 },
   unitHeader: {
     flexDirection: 'row',

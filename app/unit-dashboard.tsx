@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenLoader from '../components/ScreenLoader';
@@ -10,7 +10,7 @@ import type { AccessLog } from '../services/accessLogs';
 import { isResidentFeatureEnabled } from '../services/residentFeatureAccess';
 import { loadResidentOverview } from '../services/residentOverview';
 import { residentRealtimeService } from '../services/residentRealtime';
-import { listUnitResidents } from '../services/unitResidents';
+import { getPersons } from '../services/persons';
 import type { VisitForecast } from '../services/visitForecasts';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -32,7 +32,6 @@ export default function UnitDashboardScreen() {
   const residentAccessAllowed = isResidentFeatureEnabled(residentAppConfig, 'access');
   const deliveriesEnabled = isResidentFeatureEnabled(residentAppConfig, 'deliveries');
   const messagesEnabled = isResidentFeatureEnabled(residentAppConfig, 'messages');
-  const slimMode = residentAppConfig?.slimMode === true;
   const effectiveUnitId =
     selectedUnitId ??
     user?.selectedUnitId ??
@@ -49,14 +48,30 @@ export default function UnitDashboardScreen() {
   const [recentLogs, setRecentLogs] = useState<AccessLog[]>([]);
   const [cameras, setCameras] = useState(0);
   const [vehicles, setVehicles] = useState(0);
-  const [residents, setResidents] = useState(0);
+  const [peopleCounts, setPeopleCounts] = useState<{
+    total: number | null;
+    residents: number | null;
+    visitors: number | null;
+    providers: number | null;
+    renters: number | null;
+  }>({
+    total: null,
+    residents: null,
+    visitors: null,
+    providers: null,
+    renters: null,
+  });
   const [residentPreview, setResidentPreview] = useState<{ id: string; name: string }[]>([]);
   const [deliveries, setDeliveries] = useState(0);
   const [messages, setMessages] = useState(0);
   const [notifications, setNotifications] = useState(0);
-  const [realtimeLabel, setRealtimeLabel] = useState('Atualizacao periodica');
+  const latestLoadRef = useRef(0);
+  const [realtimeLabel, setRealtimeLabel] = useState('Atualização periódica');
 
   const loadDashboard = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
+    const requestId = Date.now() + Math.random();
+    latestLoadRef.current = requestId;
+
     try {
       if (mode === 'refresh') {
         setRefreshing(true);
@@ -68,8 +83,12 @@ export default function UnitDashboardScreen() {
 
       const [overview, residentsResult] = await Promise.all([
         loadResidentOverview({ logLimit: 5, messageLimit: 20, upcomingVisitsLimit: 3 }).catch(() => null),
-        effectiveUnitId ? listUnitResidents(effectiveUnitId).catch(() => []) : Promise.resolve([]),
+        effectiveUnitId ? getPersons().catch(() => null) : Promise.resolve(null),
       ]);
+
+      if (latestLoadRef.current !== requestId) {
+        return;
+      }
 
       setAlerts((current) => (overview?.alerts.available ? overview.alerts.active : current));
       setDeliveries((current) => (overview?.deliveries.available ? overview.deliveries.pending : current));
@@ -84,24 +103,43 @@ export default function UnitDashboardScreen() {
       });
       setCameras((current) => (overview?.cameras.available ? overview.cameras.total : current));
       setVehicles((current) => (overview?.vehicles.available ? overview.vehicles.total : current));
-      setResidents((current) => {
-        if (!effectiveUnitId) return 0;
-        return residentsResult.length > 0 ? residentsResult.length : current;
-      });
-      setResidentPreview((current) => {
-        if (residentsResult.length > 0) {
-          return residentsResult.slice(0, 4).map((item) => ({ id: item.id, name: item.name }));
-        }
-        return effectiveUnitId ? current : [];
-      });
+      if (!effectiveUnitId) {
+        setPeopleCounts({
+          total: null,
+          residents: null,
+          visitors: null,
+          providers: null,
+          renters: null,
+        });
+        setResidentPreview([]);
+      } else if (Array.isArray(residentsResult)) {
+        const residentsOnly = residentsResult.filter((item) => String(item.category || '').toUpperCase() === 'RESIDENT');
+        const visitorsOnly = residentsResult.filter((item) => String(item.category || '').toUpperCase() === 'VISITOR');
+        const providersOnly = residentsResult.filter((item) => String(item.category || '').toUpperCase() === 'SERVICE_PROVIDER');
+        const rentersOnly = residentsResult.filter((item) => String(item.category || '').toUpperCase() === 'RENTER');
+
+        setPeopleCounts({
+          total: residentsResult.length,
+          residents: residentsOnly.length,
+          visitors: visitorsOnly.length,
+          providers: providersOnly.length,
+          renters: rentersOnly.length,
+        });
+        setResidentPreview(residentsOnly.slice(0, 4).map((item) => ({ id: item.id, name: item.name })));
+      }
       setMessages((current) => (overview?.messages.available ? overview.messages.unread : current));
       setNotifications((current) => (overview?.notifications.available ? overview.notifications.unread : current));
       setLastUpdatedAt(new Date());
     } catch {
-      setError('Nao foi possivel atualizar o resumo da unidade agora.');
+      if (latestLoadRef.current !== requestId) {
+        return;
+      }
+      setError('Não foi possível atualizar o resumo da unidade agora.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (latestLoadRef.current === requestId) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [effectiveUnitId, lastUpdatedAt]);
 
@@ -115,14 +153,14 @@ export default function UnitDashboardScreen() {
     return residentRealtimeService.subscribe((snapshot) => {
       setRealtimeLabel(
         snapshot.status === 'prepared' || snapshot.status === 'connected'
-          ? 'Atualizacao automatica'
-          : 'Atualizacao periodica'
+          ? 'Atualização automática'
+          : 'Atualização periódica'
       );
     });
   }, []);
 
   const statusText = useMemo(() => {
-    if (alerts > 0) return 'Atencao necessaria';
+    if (alerts > 0) return 'Atenção necessária';
     if (scheduledAccess > 0) return 'Acessos programados';
     return 'Tudo calmo';
   }, [alerts, scheduledAccess]);
@@ -141,9 +179,7 @@ export default function UnitDashboardScreen() {
       items.push(deliveries === 1 ? '1 encomenda aguardando retirada.' : `${deliveries} encomendas aguardando retirada.`);
     }
     if (scheduledAccess > 0) {
-      items.push(
-        scheduledAccess === 1 ? '1 acesso previsto nas proximas horas.' : `${scheduledAccess} acessos previstos nas proximas horas.`
-      );
+      items.push(scheduledAccess === 1 ? '1 acesso previsto nas próximas horas.' : `${scheduledAccess} acessos previstos nas próximas horas.`);
     }
 
     return items.slice(0, 3);
@@ -154,11 +190,11 @@ export default function UnitDashboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: 'Minha unidade',
+          headerTitle: 'Resumo da unidade',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerLeft: () => (
@@ -175,7 +211,7 @@ export default function UnitDashboardScreen() {
           <Text style={styles.emptyTitle}>Escolha uma unidade</Text>
           <Text style={styles.emptyDescription}>O resumo aparece quando uma unidade estiver ativa no app.</Text>
           <TouchableOpacity style={styles.emptyAction} activeOpacity={0.86} onPress={() => router.replace('/')}>
-            <Text style={styles.emptyActionText}>Voltar para o inicio</Text>
+            <Text style={styles.emptyActionText}>Voltar para o início</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -184,16 +220,19 @@ export default function UnitDashboardScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard('refresh')} tintColor={colors.primary} />}
         >
           <View style={styles.hero}>
-            <Text style={styles.kicker}>Resumo da unidade</Text>
+            <View style={styles.heroTopRow}>
+              <Text style={styles.kicker}>Resumo da unidade</Text>
+              <Text style={styles.updatedBadge}>
+                {lastUpdatedAt
+                  ? `Atualizado às ${lastUpdatedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Atualizando agora'}
+              </Text>
+            </View>
             <Text style={styles.title}>{unitLabel}</Text>
-            <Text style={styles.status}>{statusText}</Text>
-            <Text style={styles.updated}>
-              {lastUpdatedAt
-                ? `Atualizado as ${lastUpdatedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                : 'Resumo em tempo real'}
-            </Text>
-            <Text style={styles.updated}>{realtimeLabel}</Text>
-            <Text style={styles.updated}>{slimMode ? 'Modo simplificado ativo' : 'Modo completo ativo'}</Text>
+            <View style={styles.heroFooterRow}>
+              <Text style={styles.status}>{statusText}</Text>
+              <Text style={styles.heroHint}>{realtimeLabel}</Text>
+            </View>
           </View>
 
           {error ? (
@@ -204,7 +243,7 @@ export default function UnitDashboardScreen() {
           ) : null}
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Resumo rapido</Text>
+            <Text style={styles.summaryTitle}>Resumo rápido</Text>
             {highlights.length > 0 ? (
               highlights.map((item) => (
                 <View key={item} style={styles.summaryRow}>
@@ -213,18 +252,21 @@ export default function UnitDashboardScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>Sem pendencias no momento.</Text>
+              <Text style={styles.emptyText}>Sem pendências no momento.</Text>
             )}
           </View>
 
           <View style={styles.grid}>
-            <Metric title="Pessoas" value={residents} icon="people-outline" route="/people" />
+            <Metric title="Moradores" value={peopleCounts.residents} icon="people-outline" route="/people" />
+            <Metric title="Visitantes" value={peopleCounts.visitors} icon="person-outline" route="/people" />
+            <Metric title="Prestadores" value={peopleCounts.providers} icon="construct-outline" route="/people" />
+            <Metric title="Locatários" value={peopleCounts.renters} icon="key-outline" route="/people" />
             {residentAccessAllowed ? (
               <Metric title="Acessos previstos" value={scheduledAccess} icon="calendar-outline" route="/people/visits" />
             ) : null}
-            {vehiclesEnabled ? <Metric title="Veiculos" value={vehicles} icon="car-outline" route="/people/vehicles" /> : null}
+            {vehiclesEnabled ? <Metric title="Veículos" value={vehicles} icon="car-outline" route="/people/vehicles" /> : null}
             {deliveriesEnabled ? <Metric title="Encomendas" value={deliveries} icon="cube-outline" route="/deliveries" /> : null}
-            {camerasEnabled ? <Metric title="Cameras da unidade" value={cameras} icon="videocam-outline" route="/cameras" /> : null}
+            {camerasEnabled ? <Metric title="Câmeras da unidade" value={cameras} icon="videocam-outline" route="/cameras" /> : null}
             <Metric title="Alertas" value={alerts} icon="notifications-outline" danger={alerts > 0} route="/alerts" />
             <Metric title="Avisos" value={messages + notifications} icon="mail-unread-outline" route="/profile/resident-notifications" />
           </View>
@@ -233,15 +275,15 @@ export default function UnitDashboardScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Atalhos da unidade</Text>
               <TouchableOpacity onPress={() => router.push('/profile/diagnostics')}>
-                <Text style={styles.sectionLink}>Diagnosticos</Text>
+                <Text style={styles.sectionLink}>Diagnósticos</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.actionsGrid}>
               <HubAction title="Pessoas" icon="people-outline" route="/people" />
-              {vehiclesEnabled ? <HubAction title="Veiculos" icon="car-outline" route="/people/vehicles" /> : null}
+              {vehiclesEnabled ? <HubAction title="Veículos" icon="car-outline" route="/people/vehicles" /> : null}
               {residentAccessAllowed ? <HubAction title="Visitantes" icon="person-add-outline" route="/people/access-form" /> : null}
               {deliveriesEnabled ? <HubAction title="Encomendas" icon="cube-outline" route="/deliveries" /> : null}
-              {camerasEnabled ? <HubAction title="Cameras da unidade" icon="videocam-outline" route="/cameras" /> : null}
+              {camerasEnabled ? <HubAction title="Câmeras da unidade" icon="videocam-outline" route="/cameras" /> : null}
             </View>
           </View>
 
@@ -259,7 +301,7 @@ export default function UnitDashboardScreen() {
               ) : vehiclesEnabled ? (
                 <TouchableOpacity style={styles.secondaryAction} activeOpacity={0.86} onPress={() => router.push('/people/vehicles')}>
                   <Ionicons name="car-outline" size={18} color={colors.primary} />
-                  <Text style={styles.secondaryActionText}>Veiculos</Text>
+                  <Text style={styles.secondaryActionText}>Veículos</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -288,7 +330,7 @@ export default function UnitDashboardScreen() {
           {residentAccessAllowed ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Proximos acessos</Text>
+                <Text style={styles.sectionTitle}>Próximos acessos</Text>
                 <TouchableOpacity onPress={() => router.push('/people/visits')}>
                   <Text style={styles.sectionLink}>Ver previstos</Text>
                 </TouchableOpacity>
@@ -310,7 +352,7 @@ export default function UnitDashboardScreen() {
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={styles.emptyText}>Nenhuma visita, prestador ou locatario previsto.</Text>
+                <Text style={styles.emptyText}>Nenhuma visita, prestador ou locatário previsto.</Text>
               )}
             </View>
           ) : null}
@@ -318,7 +360,7 @@ export default function UnitDashboardScreen() {
           {residentAccessAllowed ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Ultimos acessos</Text>
+                <Text style={styles.sectionTitle}>Últimos acessos</Text>
                 <TouchableOpacity onPress={() => router.push('/people/access-history')}>
                   <Text style={styles.sectionLink}>Ver todos</Text>
                 </TouchableOpacity>
@@ -339,7 +381,7 @@ export default function UnitDashboardScreen() {
                       <Text style={styles.accessMeta}>{formatTime(log.timestamp)}</Text>
                     </View>
                     <Text style={styles.accessStatus}>
-                      {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saida' : 'Entrada'}
+                      {log.result === 'DENIED' ? 'Negado' : log.direction === 'EXIT' ? 'Saída' : 'Entrada'}
                     </Text>
                   </View>
                 ))
@@ -352,7 +394,7 @@ export default function UnitDashboardScreen() {
           {!messagesEnabled ? (
             <View style={styles.notice}>
               <Ionicons name="chatbubbles-outline" size={18} color={colors.warning} />
-              <Text style={styles.noticeText}>As mensagens operacionais desta unidade estao desabilitadas na configuracao atual.</Text>
+              <Text style={styles.noticeText}>As mensagens operacionais desta unidade estão desabilitadas na configuração atual.</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -363,7 +405,7 @@ export default function UnitDashboardScreen() {
 
 function categoryLabel(value?: string | null) {
   if (value === 'SERVICE_PROVIDER') return 'Prestador';
-  if (value === 'RENTER') return 'Locatario';
+  if (value === 'RENTER') return 'Locatário';
   if (value === 'RESIDENT') return 'Morador';
   return 'Visitante';
 }
@@ -376,7 +418,7 @@ function Metric({
   danger,
 }: {
   title: string;
-  value: number;
+  value: number | null;
   icon: keyof typeof Ionicons.glyphMap;
   route: string;
   danger?: boolean;
@@ -386,7 +428,7 @@ function Metric({
       <View style={[styles.metricIcon, danger && styles.metricIconDanger]}>
         <Ionicons name={icon} size={22} color={danger ? colors.danger : colors.primary} />
       </View>
-      <Text style={[styles.metricValue, danger && styles.metricValueDanger]}>{value}</Text>
+      <Text style={[styles.metricValue, danger && styles.metricValueDanger]}>{value === null ? '—' : value}</Text>
       <Text style={styles.metricTitle}>{title}</Text>
     </TouchableOpacity>
   );
@@ -406,7 +448,9 @@ function HubAction({
       <View style={styles.hubActionIcon}>
         <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
-      <Text style={styles.hubActionTitle}>{title}</Text>
+      <Text style={styles.hubActionTitle} numberOfLines={2}>
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -428,9 +472,21 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   emptyActionText: { color: colors.white, fontSize: 14, fontWeight: '900' },
-  hero: { backgroundColor: colors.primary, borderRadius: 8, padding: 18, marginBottom: 14 },
+  hero: { backgroundColor: colors.primary, borderRadius: 8, padding: 16, marginBottom: 14 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   kicker: { color: 'rgba(255,255,255,0.78)', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  title: { color: colors.white, fontSize: 24, fontWeight: '900', marginTop: 8 },
+  updatedBadge: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  title: { color: colors.white, fontSize: 24, fontWeight: '900', marginTop: 10 },
+  heroFooterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
   status: {
     alignSelf: 'flex-start',
     color: colors.white,
@@ -442,9 +498,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     fontSize: 12,
     fontWeight: '900',
-    marginTop: 12,
   },
-  updated: { color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 12 },
+  heroHint: { color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '700', textAlign: 'right', flex: 1 },
   notice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -468,7 +523,7 @@ const styles = StyleSheet.create({
   summaryTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginBottom: 6 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   summaryText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 8 },
   actionRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   primaryAction: {
     flex: 1.3,
@@ -497,13 +552,15 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: { color: colors.primary, fontSize: 14, fontWeight: '900', textAlign: 'center' },
   metricCard: {
-    width: '47.9%',
+    width: '31%',
     backgroundColor: colors.surface,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     alignItems: 'center',
+    marginBottom: 12,
   },
   metricIcon: {
     width: 42,
@@ -515,9 +572,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   metricIconDanger: { backgroundColor: colors.dangerSoft },
-  metricValue: { color: colors.text, fontSize: 26, fontWeight: '900', textAlign: 'center' },
+  metricValue: { color: colors.text, fontSize: 22, fontWeight: '900', textAlign: 'center' },
   metricValueDanger: { color: colors.danger },
-  metricTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+  metricTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '800', textAlign: 'center', marginTop: 4 },
   section: {
     backgroundColor: colors.surface,
     borderRadius: 8,
@@ -529,17 +586,20 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
   sectionLink: { color: colors.primary, fontSize: 12, fontWeight: '900' },
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   hubAction: {
-    width: '47.5%',
-    minHeight: 86,
+    width: '31%',
+    minHeight: 78,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
+    marginBottom: 10,
   },
   hubActionIcon: {
     width: 38,
@@ -549,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hubActionTitle: { color: colors.text, fontSize: 13, fontWeight: '900' },
+  hubActionTitle: { color: colors.text, fontSize: 11, lineHeight: 14, fontWeight: '900', textAlign: 'center' },
   accessRow: {
     flexDirection: 'row',
     alignItems: 'center',

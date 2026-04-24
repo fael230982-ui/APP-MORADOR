@@ -11,7 +11,7 @@ import { hapticFeedback } from '../../services/haptics';
 function resolveVersionLabel() {
   const version = Constants.expoConfig?.version || '1.0.0';
   const build = Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || 'local';
-  return `Versao ${version} (${build})`;
+  return `Versão ${version} (${build})`;
 }
 
 export default function AboutScreen() {
@@ -50,8 +50,7 @@ export default function AboutScreen() {
         <View style={styles.noteBox}>
           <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
           <Text style={styles.noteText}>
-            Este aplicativo esta alinhado com a API Sapinho e segue preparado para novas liberacoes de producao sem
-            quebrar o fluxo do morador.
+            Este aplicativo foi preparado para oferecer ao morador uma experiência simples, segura e direta no dia a dia.
           </Text>
         </View>
 

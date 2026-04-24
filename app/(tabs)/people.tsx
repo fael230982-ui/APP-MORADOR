@@ -25,8 +25,7 @@ const CATEGORIES = [
   { id: 'RESIDENT', label: 'Moradores' },
   { id: 'VISITOR', label: 'Visitantes' },
   { id: 'SERVICE_PROVIDER', label: 'Prestadores' },
-  { id: 'DELIVERER', label: 'Entregadores' },
-  { id: 'RENTER', label: 'Locatarios' },
+  { id: 'RENTER', label: 'Locatários' },
 ];
 
 export default function PeopleScreen() {
@@ -43,7 +42,7 @@ export default function PeopleScreen() {
   const loadPeople = useCallback(async () => {
     if (!residentAccessAllowed) {
       setPeople([]);
-      setError('Sua conta nao pode consultar os cadastros desta unidade.');
+      setError('Sua conta não pode consultar os cadastros desta unidade.');
       setLoading(false);
       return;
     }
@@ -55,11 +54,11 @@ export default function PeopleScreen() {
       setPeople(data);
     } catch (err: any) {
       if (!err?.response) {
-        setError('Nao foi possivel carregar os cadastros agora. Tente novamente em instantes.');
+        setError('Não foi possível carregar os cadastros agora. Tente novamente em instantes.');
       } else if (err.response.status === 403) {
-        setError('Sua conta nao pode consultar os cadastros desta unidade.');
+        setError('Sua conta não pode consultar os cadastros desta unidade.');
       } else {
-        setError('Nao foi possivel carregar os cadastros agora.');
+        setError('Não foi possível carregar os cadastros agora.');
       }
     } finally {
       setLoading(false);
@@ -82,12 +81,12 @@ export default function PeopleScreen() {
   const listHeader = (
     <View style={styles.header}>
       <Text style={styles.title}>Pessoas</Text>
-      <Text style={styles.subtitle}>Veja quem esta vinculado a unidade e autorize novos acessos quando precisar.</Text>
+      <Text style={styles.subtitle}>Veja quem está vinculado à unidade e autorize novos acessos quando precisar.</Text>
 
       {!residentAccessAllowed ? (
         <View style={styles.noticeBox}>
           <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
-          <Text style={styles.noticeText}>O controle de acesso desta unidade nao esta disponivel para esta conta.</Text>
+          <Text style={styles.noticeText}>O controle de acesso desta unidade não está disponível para esta conta.</Text>
         </View>
       ) : null}
 
@@ -106,7 +105,7 @@ export default function PeopleScreen() {
         {vehiclesEnabled ? (
           <TouchableOpacity style={styles.shortcutButton} activeOpacity={0.85} onPress={() => router.push('/people/vehicles')}>
             <Ionicons name="car-outline" size={18} color={colors.primary} />
-            <Text style={styles.shortcutText}>Veiculos</Text>
+          <Text style={styles.shortcutText}>Veículos</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -117,7 +116,7 @@ export default function PeopleScreen() {
 
         <TouchableOpacity style={styles.shortcutButton} activeOpacity={0.85} onPress={() => router.push('/people/access-history')}>
           <Ionicons name="walk-outline" size={18} color={colors.primary} />
-          <Text style={styles.shortcutText}>Historico</Text>
+          <Text style={styles.shortcutText}>Histórico</Text>
         </TouchableOpacity>
       </View>
 
@@ -136,21 +135,17 @@ export default function PeopleScreen() {
           />
         </View>
 
-        <FlatList
-          data={CATEGORIES}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+        <View style={styles.filterGrid}>
+          {CATEGORIES.map((item) => (
             <TouchableOpacity
+              key={item.id}
               style={[styles.filterTab, selectedCategory === item.id && styles.filterTabActive]}
               onPress={() => setSelectedCategory(item.id)}
             >
               <Text style={[styles.filterText, selectedCategory === item.id && styles.filterTextActive]}>{item.label}</Text>
             </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.filterList}
-        />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -160,9 +155,9 @@ export default function PeopleScreen() {
       <View style={styles.container}>
         <FeatureLockedState
           icon="lock-closed-outline"
-          title="Pessoas indisponiveis"
-          description="O controle de acesso desta unidade nao foi habilitado para esta conta ou para este condominio."
-          actionLabel="Voltar para o inicio"
+          title="Pessoas indisponíveis"
+          description="O controle de acesso desta unidade não foi habilitado para esta conta ou para este condomínio."
+          actionLabel="Voltar para o início"
           onAction={() => router.replace('/')}
         />
       </View>
@@ -272,15 +267,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   searchInput: { flex: 1, color: colors.text, marginLeft: 8 },
-  filterList: { paddingTop: 12, paddingBottom: 2 },
+  filterGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 12 },
   filterTab: {
-    paddingHorizontal: 14,
+    width: '31%',
+    minHeight: 40,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
-    marginRight: 8,
+    marginBottom: 8,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterTabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },

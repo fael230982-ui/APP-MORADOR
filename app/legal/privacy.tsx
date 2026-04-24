@@ -19,7 +19,9 @@ export default function PrivacyScreen() {
         if (!policy) return;
         setPolicyVersion(policy.currentVersion);
         setPolicySummary(
-          `Escopo atual: ${policy.scopeType}. Revogação suportada: ${policy.revocationSupported ? 'sim' : 'não'}. Histórico versionado: ${policy.historyVersioningSupported ? 'sim' : 'não'}.`
+          `Escopo atual do aceite: ${getScopeLabel(policy.scopeType)}. Revogação suportada: ${
+            policy.revocationSupported ? 'sim' : 'não'
+          }. Histórico versionado: ${policy.historyVersioningSupported ? 'sim' : 'não'}.`
         );
       })
       .catch(() => undefined);
@@ -35,7 +37,7 @@ export default function PrivacyScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Política de Privacidade</Text>
+        <Text style={styles.headerTitle}>Privacidade e termos</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -46,9 +48,7 @@ export default function PrivacyScreen() {
             <Text style={styles.policyVersion}>Versão {policyVersion}</Text>
             {policySummary ? <Text style={styles.policyText}>{policySummary}</Text> : null}
             {historyCount !== null ? (
-              <Text style={styles.historyText}>
-                Registros de aceite visíveis para este dispositivo: {historyCount}
-              </Text>
+              <Text style={styles.historyText}>Registros de aceite visíveis para este aparelho: {historyCount}</Text>
             ) : null}
           </View>
         ) : null}
@@ -73,12 +73,19 @@ export default function PrivacyScreen() {
 
         <Text style={styles.sectionTitle}>Retenção e governança</Text>
         <Text style={styles.text}>
-          Prazos de guarda, descarte, base legal, controlador, operador e encarregado precisam ser definidos e documentados
-          fora do app, com reflexo nas APIs, logs e fluxos de suporte.
+          Prazos de guarda, descarte, base legal, controlador, operador e encarregado precisam ser definidos e documentados fora
+          do app, com reflexo nas APIs, logs e fluxos de suporte.
         </Text>
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getScopeLabel(scopeType?: string | null) {
+  if (scopeType === 'ACCOUNT_DEVICE') return 'conta e dispositivo';
+  if (scopeType === 'ACCOUNT') return 'conta';
+  if (scopeType === 'DEVICE') return 'dispositivo';
+  return 'conta e dispositivo';
 }
 
 const styles = StyleSheet.create({
